@@ -1082,6 +1082,31 @@
         });
         console.log('AI News Assistant: Added event listener to custom question button');
       }
+      
+      // Add listeners to highlight and share buttons
+      const highlightButton = contentElement.querySelector('button[onclick="highlightKeyPointsInArticle()"]');
+      if (highlightButton) {
+        highlightButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          console.log('AI News Assistant: Highlight button clicked via event listener');
+          if (typeof window.highlightKeyPointsInArticle === 'function') {
+            window.highlightKeyPointsInArticle(e.target);
+          }
+        });
+        console.log('AI News Assistant: Added event listener to highlight button');
+      }
+      
+      const shareButton = contentElement.querySelector('button[onclick="shareOrExportSummary()"]');
+      if (shareButton) {
+        shareButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          console.log('AI News Assistant: Share button clicked via event listener');
+          if (typeof window.shareOrExportSummary === 'function') {
+            window.shareOrExportSummary(e.target);
+          }
+        });
+        console.log('AI News Assistant: Added event listener to share button');
+      }
     }, 100);
   }
   
@@ -1562,8 +1587,13 @@
   }
   
   // Highlight key points throughout the article
-  function highlightKeyPointsInArticle() {
-    if (!currentSummary?.highlights) return;
+  function highlightKeyPointsInArticle(buttonElement = null) {
+    console.log('AI News Assistant: highlightKeyPointsInArticle called');
+    
+    if (!currentSummary?.highlights) {
+      console.error('AI News Assistant: No highlights available');
+      return;
+    }
     
     // Clear existing highlights
     clearHighlights();
@@ -1575,18 +1605,22 @@
       }, index * 200); // Stagger highlights for visual effect
     });
     
-    // Show confirmation
-    const button = event.target;
-    const originalText = button.textContent;
-    button.textContent = '✨ Highlighted!';
-    button.style.background = '#ffc107';
-    button.style.color = '#000';
+    // Show confirmation on button if available
+    const button = buttonElement || document.querySelector('button[onclick="highlightKeyPointsInArticle()"]');
+    if (button) {
+      const originalText = button.textContent;
+      button.textContent = '✨ Highlighted!';
+      button.style.background = '#ffc107';
+      button.style.color = '#000';
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = '#28a745';
+        button.style.color = 'white';
+      }, 2000);
+    }
     
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.style.background = '#28a745';
-      button.style.color = 'white';
-    }, 2000);
+    console.log('AI News Assistant: Highlighted', currentSummary.highlights.length, 'key points');
   }
   
   function highlightTextInArticle(searchText, className) {
@@ -1642,19 +1676,37 @@
   }
   
   // Share and export functions
-  function shareOrExportSummary() {
+  function shareOrExportSummary(buttonElement = null) {
+    console.log('AI News Assistant: shareOrExportSummary called');
+    
     const summaryText = formatSummaryForSharing();
+    console.log('AI News Assistant: Summary text prepared, length:', summaryText.length);
     
     if (navigator.share) {
+      console.log('AI News Assistant: Using native share API');
       navigator.share({
         title: currentSummary?.title || 'News Summary',
         text: summaryText,
         url: window.location.href
+      }).then(() => {
+        console.log('AI News Assistant: Share successful');
+      }).catch(error => {
+        console.warn('AI News Assistant: Share failed, falling back to clipboard:', error);
+        copyToClipboard(summaryText, buttonElement);
       });
     } else {
-      // Fallback to clipboard
-      navigator.clipboard.writeText(summaryText).then(() => {
-        const button = event.target;
+      console.log('AI News Assistant: Using clipboard fallback');
+      copyToClipboard(summaryText, buttonElement);
+    }
+  }
+  
+  // Helper function to copy to clipboard with visual feedback
+  function copyToClipboard(text, buttonElement = null) {
+    navigator.clipboard.writeText(text).then(() => {
+      console.log('AI News Assistant: Copied to clipboard successfully');
+      
+      const button = buttonElement || document.querySelector('button[onclick="shareOrExportSummary()"]');
+      if (button) {
         const originalText = button.textContent;
         button.textContent = '✓ Copied!';
         button.style.background = '#28a745';
@@ -1662,8 +1714,12 @@
           button.textContent = originalText;
           button.style.background = '#17a2b8';
         }, 2000);
-      });
-    }
+      }
+    }).catch(error => {
+      console.error('AI News Assistant: Failed to copy to clipboard:', error);
+      // Show fallback notification
+      alert('Failed to copy summary to clipboard');
+    });
   }
   
   function formatSummaryForSharing() {
