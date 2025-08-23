@@ -167,6 +167,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   }
   
+  if (request.action === 'askFollowUp') {
+    console.log('Background: Processing follow-up question:', request.data.question);
+    handleFollowUpQuestion(request.data)
+      .then(answer => sendResponse({ success: true, answer }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // Keep message channel open for async response
+  }
+  
+  if (request.action === 'submitFeedback') {
+    console.log('Background: Received user feedback:', request.data);
+    storeFeedback(request.data)
+      .then(() => sendResponse({ success: true, message: 'Feedback submitted successfully' }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // Keep message channel open for async response
+  }
+  
   // Always return true to keep message channel open
   return true;
 });
@@ -283,5 +299,127 @@ async function updateBackendApiConfig(settings) {
   } else {
     console.warn('Background: Failed to update backend API configuration:', response.status);
     throw new Error(`Backend configuration update failed: ${response.status}`);
+  }
+}
+
+// Handle follow-up questions
+async function handleFollowUpQuestion(data) {
+  const config = await loadExtensionConfig();
+  const apiUrl = config.getApiUrl('summarize');
+  
+  // Load user's API configuration
+  const userSettings = await chrome.storage.sync.get(['apiUrl', 'bearerToken', 'defaultModel', 'fallbackModel']);
+  
+  // Create optimized follow-up prompt
+  const followUpPrompt = createFollowUpPrompt(data.question, data.context);
+  
+  // Prepare request data with optional API config
+  const requestData = {
+    title: `Follow-up: ${data.context.title}`,
+    content: followUpPrompt,
+    preferences: {
+      summaryLength: 'medium',
+      focusArea: 'general', 
+      language: 'english'
+    }
+  };
+  
+  if (userSettings.apiUrl && userSettings.bearerToken) {
+    requestData.apiConfig = {
+      apiUrl: userSettings.apiUrl,
+      bearerToken: userSettings.bearerToken,
+      defaultModel: userSettings.defaultModel,
+      fallbackModel: userSettings.fallbackModel
+    };
+  }
+  
+  console.log('Background: Sending follow-up question to backend');
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestData),
+    signal: AbortSignal.timeout(config.api.timeout)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Follow-up API error ${response.status}: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  return result.summary || result.answer || 'I apologize, but I couldn\'t generate a proper response to that question.';
+}
+
+// Create optimized prompt for follow-up questions
+function createFollowUpPrompt(question, context) {
+  return `You are an AI assistant helping users understand news articles in more depth. 
+
+CONTEXT:
+Article Title: ${context.title}
+Original Summary: ${context.summary}
+Key Highlights: ${context.highlights ? context.highlights.join('; ') : 'None provided'}
+Article URL: ${context.url}
+
+USER QUESTION: ${question}
+
+Please provide a clear, concise, and informative answer to the user's question based on the article context. Focus on:
+1. Directly answering the specific question asked
+2. Providing relevant details from the article context
+3. Offering insights that help the user understand the broader implications
+4. Keeping the response conversational and accessible
+
+If the question cannot be fully answered from the provided context, acknowledge this and provide what relevant information you can, then suggest what additional information might be needed.
+
+Response (in plain text, conversational tone):`;
+}
+
+// Store user feedback for analysis
+async function storeFeedback(feedbackData) {
+  try {
+    // Store in Chrome storage for extension analytics
+    const existingFeedback = await chrome.storage.local.get(['userFeedback']);
+    const feedbackList = existingFeedback.userFeedback || [];
+    
+    feedbackList.push({
+      ...feedbackData,
+      id: Date.now() + Math.random().toString(36).substring(7),
+      version: '2.2.0'
+    });
+    
+    // Keep only last 200 feedback entries
+    const recentFeedback = feedbackList.slice(-200);
+    
+    await chrome.storage.local.set({ userFeedback: recentFeedback });
+    
+    // Optionally send to backend for aggregated analysis
+    try {
+      const config = await loadExtensionConfig();
+      const backendUrl = `${config.api.baseUrl}/api/feedback`;
+      
+      await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feedback: feedbackData,
+          timestamp: new Date().toISOString(),
+          extensionVersion: '2.2.0'
+        })
+      });
+    } catch (backendError) {
+      console.log('Background: Could not send feedback to backend:', backendError);
+      // Don't fail the whole operation if backend is unavailable
+    }
+    
+    console.log('Background: Feedback stored successfully');
+    return true;
+    
+  } catch (error) {
+    console.error('Background: Error storing feedback:', error);
+    throw error;
   }
 }

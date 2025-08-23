@@ -238,6 +238,37 @@ app.post('/api/test', async (req, res) => {
     }
 });
 
+// User feedback endpoint
+app.post('/api/feedback', async (req, res) => {
+    try {
+        const { feedback, timestamp, extensionVersion } = req.body;
+        
+        console.log('Received user feedback:', {
+            rating: feedback.rating,
+            url: feedback.url,
+            title: feedback.title,
+            timestamp: timestamp,
+            version: extensionVersion,
+            hasFeedbackText: !!feedback.feedback
+        });
+        
+        // Store feedback (in production, you'd want to store this in a database)
+        // For now, we'll just acknowledge receipt
+        res.json({
+            message: 'Feedback received successfully',
+            feedbackId: Date.now().toString(),
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Feedback endpoint error:', error);
+        res.status(500).json({
+            error: 'Failed to process feedback',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // Get supported languages and focus areas
 app.get('/api/config', (req, res) => {
     res.json({

@@ -769,10 +769,13 @@
     }
   }
   
-  // Display summary in Bloomberg-style layout
+  // Display enhanced interactive summary
   function displaySummary(summary) {
     const contentElement = document.getElementById('summary-content');
     if (!contentElement) return;
+    
+    // Detect article type for optimized display
+    const articleType = detectArticleType(summary);
     
     contentElement.innerHTML = `
       <div style="
@@ -781,18 +784,31 @@
         border: 1px solid #e8ecf0;
         overflow: hidden;
       ">
+        <!-- Title and Main Summary -->
         <div style="
           padding: 20px 24px;
           border-bottom: 1px solid #f0f2f5;
         ">
-          <div style="
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-            line-height: 1.4;
-            margin-bottom: 16px;
-            letter-spacing: -0.01em;
-          ">${summary.title || 'Article Summary'}</div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="
+              font-size: 18px;
+              font-weight: 600;
+              color: #1a1a1a;
+              line-height: 1.4;
+              letter-spacing: -0.01em;
+              flex: 1;
+            ">${summary.title || 'Article Summary'}</div>
+            <div style="
+              background: ${getTypeColor(articleType)};
+              color: white;
+              padding: 4px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            ">${articleType}</div>
+          </div>
           <div style="
             font-size: 16px;
             color: #404040;
@@ -801,90 +817,309 @@
           ">${summary.summary || 'No summary available'}</div>
         </div>
         
-        ${summary.highlights && summary.highlights.length > 0 ? `
-          <div style="padding: 20px 24px; border-bottom: 1px solid #f0f2f5; background: #fafbfc;">
-            <div style="
-              font-size: 14px;
-              font-weight: 600;
-              color: #0073e6;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 12px;
-            ">Key Highlights</div>
-            <div style="display: grid; gap: 8px;">
-              ${summary.highlights.map(highlight => `
-                <div style="
-                  display: flex;
-                  align-items: flex-start;
-                  gap: 8px;
-                  font-size: 15px;
-                  color: #404040;
-                  line-height: 1.6;
-                ">
-                  <div style="
-                    width: 6px;
-                    height: 6px;
-                    background: #0073e6;
-                    border-radius: 50%;
-                    margin-top: 8px;
-                    flex-shrink: 0;
-                  "></div>
-                  <div>${highlight}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
+        <!-- Interactive Collapsible Sections -->
+        ${createCollapsibleSection('key-highlights', '🎯 Key Highlights', summary.highlights, 'highlights')}
+        ${createCollapsibleSection('market-insights', '📊 Market Insights', summary.insights, 'insights')}
+        ${createCollapsibleSection('ai-followup', '💬 Ask AI Follow-up Questions', null, 'followup')}
         
-        ${summary.insights ? `
-          <div style="padding: 20px 24px; background: #f8f9fb;">
-            <div style="
-              font-size: 14px;
-              font-weight: 600;
-              color: #0073e6;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 12px;
-            ">Market Insights</div>
-            <div style="
-              font-size: 15px;
-              color: #404040;
-              line-height: 1.7;
-              font-style: italic;
-              border-left: 3px solid #0073e6;
-              padding-left: 16px;
-            ">${summary.insights}</div>
+        <!-- User Feedback Section -->
+        <div style="
+          padding: 20px 24px;
+          background: #f8f9fb;
+          border-top: 1px solid #e8ecf0;
+        ">
+          <div style="
+            font-size: 14px;
+            font-weight: 600;
+            color: #0073e6;
+            margin-bottom: 12px;
+          ">Rate this summary:</div>
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+            ${[1, 2, 3, 4, 5].map(rating => `
+              <button onclick="rateSummary(${rating})" style="
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: #ddd;
+                cursor: pointer;
+                transition: color 0.2s;
+                padding: 4px;
+              " onmouseover="highlightStars(${rating})" onmouseout="resetStars()" data-rating="${rating}">⭐</button>
+            `).join('')}
+            <span id="rating-text" style="margin-left: 12px; font-size: 13px; color: #666;"></span>
           </div>
-        ` : ''}
+          <textarea id="feedback-text" placeholder="Optional: Share your thoughts on this summary..." style="
+            width: 100%;
+            min-height: 60px;
+            padding: 12px;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            resize: vertical;
+            box-sizing: border-box;
+          "></textarea>
+          <button onclick="submitFeedback()" style="
+            background: #0073e6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background-color 0.2s;
+          " onmouseover="this.style.background='#0056b3'" onmouseout="this.style.background='#0073e6'">Submit Feedback</button>
+        </div>
         
+        <!-- Footer with Actions -->
         <div style="
           padding: 16px 24px;
           background: #f0f2f5;
           border-top: 1px solid #e8ecf0;
           display: flex;
-          justify-content: center;
+          justify-content: space-between;
           align-items: center;
-          gap: 8px;
         ">
-          <div style="
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(135deg, #0073e6, #0056b3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-          ">🤖</div>
-          <div style="
-            font-size: 13px;
-            color: #666;
-            font-weight: 500;
-          ">Generated by AI News Assistant</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="
+              width: 20px;
+              height: 20px;
+              background: linear-gradient(135deg, #0073e6, #0056b3);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 12px;
+            ">🤖</div>
+            <div style="
+              font-size: 13px;
+              color: #666;
+              font-weight: 500;
+            ">AI News Assistant</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="highlightKeyPointsInArticle()" style="
+              background: #28a745;
+              color: white;
+              border: none;
+              padding: 6px 12px;
+              border-radius: 4px;
+              font-size: 12px;
+              cursor: pointer;
+            ">Highlight in Article</button>
+            <button onclick="shareOrExportSummary()" style="
+              background: #17a2b8;
+              color: white;
+              border: none;
+              padding: 6px 12px;
+              border-radius: 4px;
+              font-size: 12px;
+              cursor: pointer;
+            ">Share Summary</button>
+          </div>
         </div>
       </div>
     `;
+    
+    // Initialize interactive features
+    initializeInteractiveFeatures(summary);
+  }
+  
+  // Create collapsible section
+  function createCollapsibleSection(id, title, content, type) {
+    const isExpanded = localStorage.getItem(`section-${id}`) !== 'collapsed';
+    
+    if (type === 'highlights' && (!content || content.length === 0)) return '';
+    if (type === 'insights' && !content) return '';
+    
+    return `
+      <div style="border-bottom: 1px solid #f0f2f5;">
+        <div onclick="toggleSection('${id}')" style="
+          padding: 16px 24px;
+          background: #fafbfc;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          transition: background-color 0.2s;
+        " onmouseover="this.style.background='#f5f6f7'" onmouseout="this.style.background='#fafbfc'">
+          <div style="
+            font-size: 14px;
+            font-weight: 600;
+            color: #0073e6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          ">${title}</div>
+          <div id="${id}-arrow" style="
+            font-size: 18px;
+            color: #0073e6;
+            transition: transform 0.3s ease;
+            transform: rotate(${isExpanded ? '90' : '0'}deg);
+          ">▶</div>
+        </div>
+        <div id="${id}-content" style="
+          max-height: ${isExpanded ? 'none' : '0'};
+          overflow: hidden;
+          transition: max-height 0.3s ease, padding 0.3s ease;
+          ${isExpanded ? 'padding: 20px 24px;' : 'padding: 0 24px;'}
+        ">
+          ${getContentForSection(type, content)}
+        </div>
+      </div>
+    `;
+  }
+  
+  // Get content for different section types
+  function getContentForSection(type, content) {
+    switch (type) {
+      case 'highlights':
+        return `
+          <div style="display: grid; gap: 8px;">
+            ${content.map((highlight, index) => `
+              <div style="
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                font-size: 15px;
+                color: #404040;
+                line-height: 1.6;
+                padding: 8px 0;
+              ">
+                <div style="
+                  width: 6px;
+                  height: 6px;
+                  background: #0073e6;
+                  border-radius: 50%;
+                  margin-top: 8px;
+                  flex-shrink: 0;
+                "></div>
+                <div onclick="highlightSpecificPoint(${index})" style="
+                  cursor: pointer;
+                  transition: color 0.2s;
+                " onmouseover="this.style.color='#0073e6'" onmouseout="this.style.color='#404040'">${highlight}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+      case 'insights':
+        return `
+          <div style="
+            font-size: 15px;
+            color: #404040;
+            line-height: 1.7;
+            font-style: italic;
+            border-left: 3px solid #0073e6;
+            padding-left: 16px;
+          ">${content}</div>
+        `;
+        
+      case 'followup':
+        return `
+          <div style="margin-bottom: 16px;">
+            <div style="
+              font-size: 14px;
+              color: #666;
+              margin-bottom: 12px;
+              line-height: 1.5;
+            ">Ask the AI follow-up questions about this article:</div>
+            <div style="display: grid; gap: 8px; margin-bottom: 16px;">
+              <button onclick="askFollowUp('What are the key implications?')" style="
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+                text-align: left;
+                transition: background-color 0.2s;
+              " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">💡 What are the key implications?</button>
+              <button onclick="askFollowUp('How does this affect the market?')" style="
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+                text-align: left;
+                transition: background-color 0.2s;
+              " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">📈 How does this affect the market?</button>
+              <button onclick="askFollowUp('What should investors watch for?')" style="
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+                text-align: left;
+                transition: background-color 0.2s;
+              " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">👀 What should investors watch for?</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input id="custom-question" placeholder="Ask your own question..." style="
+                flex: 1;
+                padding: 8px 12px;
+                border: 1px solid #e1e1e1;
+                border-radius: 4px;
+                font-size: 14px;
+              " onkeypress="if(event.key==='Enter') askCustomFollowUp()">
+              <button onclick="askCustomFollowUp()" style="
+                background: #0073e6;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+              ">Ask</button>
+            </div>
+          </div>
+          <div id="followup-answer" style="
+            background: #f8f9fb;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: none;
+          "></div>
+        `;
+        
+      default:
+        return '';
+    }
+  }
+  
+  // Detect article type for optimized processing
+  function detectArticleType(summary) {
+    const text = (summary.summary + ' ' + (summary.highlights || []).join(' ')).toLowerCase();
+    
+    if (text.includes('fed') || text.includes('rate') || text.includes('inflation') || text.includes('market') || text.includes('stock') || text.includes('economic')) {
+      return 'Economic';
+    } else if (text.includes('election') || text.includes('government') || text.includes('policy') || text.includes('political') || text.includes('senate') || text.includes('congress')) {
+      return 'Political';
+    } else if (text.includes('tech') || text.includes('ai') || text.includes('software') || text.includes('digital') || text.includes('innovation')) {
+      return 'Technology';
+    } else if (text.includes('climate') || text.includes('environment') || text.includes('social') || text.includes('community')) {
+      return 'Social';
+    } else {
+      return 'General';
+    }
+  }
+  
+  // Get color for article type
+  function getTypeColor(type) {
+    const colors = {
+      'Economic': '#28a745',
+      'Political': '#dc3545', 
+      'Technology': '#6f42c1',
+      'Social': '#fd7e14',
+      'General': '#6c757d'
+    };
+    return colors[type] || colors['General'];
   }
   
   // Display error in Bloomberg-style layout
@@ -937,6 +1172,356 @@
         " onmouseover="this.style.background='#0056b3'" onmouseout="this.style.background='#0073e6'">Try Again</button>
       </div>
     `;
+  }
+  
+  // Global variables for interactive features
+  let currentSummary = null;
+  let userRating = 0;
+  let highlightedElements = [];
+  
+  // Initialize interactive features
+  function initializeInteractiveFeatures(summary) {
+    currentSummary = summary;
+    
+    // Make functions globally available
+    window.toggleSection = toggleSection;
+    window.rateSummary = rateSummary;
+    window.highlightStars = highlightStars;
+    window.resetStars = resetStars;
+    window.submitFeedback = submitFeedback;
+    window.askFollowUp = askFollowUp;
+    window.askCustomFollowUp = askCustomFollowUp;
+    window.highlightSpecificPoint = highlightSpecificPoint;
+    window.highlightKeyPointsInArticle = highlightKeyPointsInArticle;
+    window.shareOrExportSummary = shareOrExportSummary;
+  }
+  
+  // Toggle collapsible sections
+  function toggleSection(sectionId) {
+    const content = document.getElementById(`${sectionId}-content`);
+    const arrow = document.getElementById(`${sectionId}-arrow`);
+    
+    if (!content || !arrow) return;
+    
+    const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+    
+    if (isCollapsed) {
+      content.style.maxHeight = 'none';
+      content.style.padding = '20px 24px';
+      arrow.style.transform = 'rotate(90deg)';
+      localStorage.setItem(`section-${sectionId}`, 'expanded');
+    } else {
+      content.style.maxHeight = '0';
+      content.style.padding = '0 24px';
+      arrow.style.transform = 'rotate(0deg)';
+      localStorage.setItem(`section-${sectionId}`, 'collapsed');
+    }
+  }
+  
+  // Rating system functions
+  function highlightStars(rating) {
+    const stars = document.querySelectorAll('[data-rating]');
+    stars.forEach((star, index) => {
+      star.style.color = index < rating ? '#ffd700' : '#ddd';
+    });
+  }
+  
+  function resetStars() {
+    const stars = document.querySelectorAll('[data-rating]');
+    stars.forEach((star, index) => {
+      star.style.color = index < userRating ? '#ffd700' : '#ddd';
+    });
+  }
+  
+  function rateSummary(rating) {
+    userRating = rating;
+    highlightStars(rating);
+    
+    const ratingText = document.getElementById('rating-text');
+    if (ratingText) {
+      const messages = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+      ratingText.textContent = messages[rating - 1];
+    }
+    
+    // Store rating locally
+    const ratingData = {
+      url: window.location.href,
+      title: currentSummary?.title || 'Unknown',
+      rating: rating,
+      timestamp: Date.now()
+    };
+    
+    const existingRatings = JSON.parse(localStorage.getItem('summaryRatings') || '[]');
+    existingRatings.push(ratingData);
+    localStorage.setItem('summaryRatings', JSON.stringify(existingRatings.slice(-100))); // Keep last 100 ratings
+  }
+  
+  function submitFeedback() {
+    const feedbackText = document.getElementById('feedback-text')?.value;
+    const feedbackData = {
+      url: window.location.href,
+      title: currentSummary?.title || 'Unknown',
+      rating: userRating,
+      feedback: feedbackText,
+      timestamp: Date.now(),
+      summary: currentSummary?.summary?.substring(0, 200) // First 200 chars for context
+    };
+    
+    // Store feedback locally
+    const existingFeedback = JSON.parse(localStorage.getItem('summaryFeedback') || '[]');
+    existingFeedback.push(feedbackData);
+    localStorage.setItem('summaryFeedback', JSON.stringify(existingFeedback.slice(-50))); // Keep last 50 feedback
+    
+    // Show confirmation
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '✓ Thanks for your feedback!';
+    button.style.background = '#28a745';
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.style.background = '#0073e6';
+    }, 2000);
+    
+    // Send to backend for analysis (optional)
+    sendFeedbackToBackend(feedbackData);
+  }
+  
+  // Follow-up Q&A functions
+  function askFollowUp(question) {
+    const answerDiv = document.getElementById('followup-answer');
+    if (!answerDiv) return;
+    
+    answerDiv.style.display = 'block';
+    answerDiv.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #0073e6;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 10px;
+          animation: pulse 1.5s infinite;
+        ">🤔</div>
+        <div style="font-weight: 600; color: #0073e6;">AI is thinking...</div>
+      </div>
+      <div style="color: #666; font-style: italic;">Question: ${question}</div>
+    `;
+    
+    // Send follow-up question to AI
+    sendFollowUpQuestion(question, answerDiv);
+  }
+  
+  function askCustomFollowUp() {
+    const questionInput = document.getElementById('custom-question');
+    const question = questionInput?.value?.trim();
+    
+    if (!question) return;
+    
+    askFollowUp(question);
+    questionInput.value = '';
+  }
+  
+  async function sendFollowUpQuestion(question, answerDiv) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'askFollowUp',
+        data: {
+          question: question,
+          context: {
+            title: currentSummary?.title,
+            summary: currentSummary?.summary,
+            highlights: currentSummary?.highlights,
+            url: window.location.href
+          }
+        }
+      });
+      
+      if (response && response.success) {
+        answerDiv.innerHTML = `
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;">
+            <div style="
+              width: 20px;
+              height: 20px;
+              background: #28a745;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 10px;
+              flex-shrink: 0;
+              margin-top: 2px;
+            ">🤖</div>
+            <div>
+              <div style="font-weight: 600; color: #28a745; margin-bottom: 4px;">AI Assistant:</div>
+              <div style="color: #666; font-style: italic; font-size: 13px; margin-bottom: 8px;">Question: ${question}</div>
+              <div>${response.answer}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        throw new Error(response?.error || 'Failed to get AI response');
+      }
+    } catch (error) {
+      answerDiv.innerHTML = `
+        <div style="color: #dc3545; font-size: 13px;">
+          ❌ Sorry, I couldn't process that question right now. Please try again later.
+        </div>
+      `;
+    }
+  }
+  
+  // Highlight specific points in article
+  function highlightSpecificPoint(index) {
+    if (!currentSummary?.highlights || index >= currentSummary.highlights.length) return;
+    
+    const highlight = currentSummary.highlights[index];
+    highlightTextInArticle(highlight, `highlight-${index}`);
+  }
+  
+  // Highlight key points throughout the article
+  function highlightKeyPointsInArticle() {
+    if (!currentSummary?.highlights) return;
+    
+    // Clear existing highlights
+    clearHighlights();
+    
+    // Highlight each key point
+    currentSummary.highlights.forEach((highlight, index) => {
+      setTimeout(() => {
+        highlightTextInArticle(highlight, `highlight-${index}`);
+      }, index * 200); // Stagger highlights for visual effect
+    });
+    
+    // Show confirmation
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '✨ Highlighted!';
+    button.style.background = '#ffc107';
+    button.style.color = '#000';
+    
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.style.background = '#28a745';
+      button.style.color = 'white';
+    }, 2000);
+  }
+  
+  function highlightTextInArticle(searchText, className) {
+    const articleContent = document.querySelector('article, .article-content, .story-body, .content');
+    if (!articleContent) return;
+    
+    const walker = document.createTreeWalker(
+      articleContent,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+      textNodes.push(node);
+    }
+    
+    // Find and highlight matching text
+    const searchWords = searchText.toLowerCase().split(' ').filter(word => word.length > 3);
+    
+    textNodes.forEach(textNode => {
+      const text = textNode.textContent.toLowerCase();
+      const hasMatch = searchWords.some(word => text.includes(word));
+      
+      if (hasMatch && textNode.parentElement) {
+        const parent = textNode.parentElement;
+        if (!parent.classList.contains(`ai-${className}`)) {
+          parent.style.background = 'linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%)';
+          parent.style.borderLeft = '3px solid #ffc107';
+          parent.style.paddingLeft = '8px';
+          parent.style.margin = '4px 0';
+          parent.style.borderRadius = '3px';
+          parent.style.transition = 'all 0.3s ease';
+          parent.classList.add(`ai-${className}`);
+          highlightedElements.push(parent);
+        }
+      }
+    });
+  }
+  
+  function clearHighlights() {
+    highlightedElements.forEach(element => {
+      element.style.background = '';
+      element.style.borderLeft = '';
+      element.style.paddingLeft = '';
+      element.style.margin = '';
+      element.style.borderRadius = '';
+      element.classList.remove(...Array.from(element.classList).filter(cls => cls.startsWith('ai-highlight')));
+    });
+    highlightedElements = [];
+  }
+  
+  // Share and export functions
+  function shareOrExportSummary() {
+    const summaryText = formatSummaryForSharing();
+    
+    if (navigator.share) {
+      navigator.share({
+        title: currentSummary?.title || 'News Summary',
+        text: summaryText,
+        url: window.location.href
+      });
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(summaryText).then(() => {
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '✓ Copied!';
+        button.style.background = '#28a745';
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#17a2b8';
+        }, 2000);
+      });
+    }
+  }
+  
+  function formatSummaryForSharing() {
+    if (!currentSummary) return '';
+    
+    let text = `📰 ${currentSummary.title}\n\n`;
+    text += `📝 Summary:\n${currentSummary.summary}\n\n`;
+    
+    if (currentSummary.highlights && currentSummary.highlights.length > 0) {
+      text += `🎯 Key Points:\n`;
+      currentSummary.highlights.forEach(highlight => {
+        text += `• ${highlight}\n`;
+      });
+      text += `\n`;
+    }
+    
+    if (currentSummary.insights) {
+      text += `💡 Insights:\n${currentSummary.insights}\n\n`;
+    }
+    
+    text += `🔗 Source: ${window.location.href}\n`;
+    text += `🤖 Summarized by AI News Assistant`;
+    
+    return text;
+  }
+  
+  // Send feedback to backend
+  async function sendFeedbackToBackend(feedbackData) {
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'submitFeedback',
+        data: feedbackData
+      });
+    } catch (error) {
+      console.log('Could not send feedback to backend:', error);
+    }
   }
   
   // Wait for page to load and then process
