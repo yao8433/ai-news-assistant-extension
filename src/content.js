@@ -789,6 +789,16 @@
       toggleSection: typeof window.toggleSection
     });
     
+    // Additional debug: Test function directly
+    setTimeout(() => {
+      console.log('AI News Assistant: Testing window.askFollowUp directly...');
+      if (typeof window.askFollowUp === 'function') {
+        console.log('AI News Assistant: window.askFollowUp is available as function');
+      } else {
+        console.error('AI News Assistant: window.askFollowUp is not available!', typeof window.askFollowUp);
+      }
+    }, 1000);
+    
     // Detect article type for optimized display
     const articleType = detectArticleType(summary);
     
@@ -938,6 +948,47 @@
         </div>
       </div>
     `;
+    
+    // Add event listeners to follow-up buttons as backup to onclick handlers
+    setTimeout(() => {
+      console.log('AI News Assistant: Adding event listeners to follow-up buttons');
+      const followUpButtons = contentElement.querySelectorAll('button[onclick^="askFollowUp"]');
+      console.log('AI News Assistant: Found follow-up buttons:', followUpButtons.length);
+      
+      followUpButtons.forEach((button, index) => {
+        const questions = [
+          'What are the key implications?',
+          'How does this affect the market?', 
+          'What should investors watch for?'
+        ];
+        const question = questions[index];
+        if (question) {
+          button.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('AI News Assistant: Button clicked via event listener:', question);
+            if (typeof window.askFollowUp === 'function') {
+              window.askFollowUp(question);
+            } else {
+              console.error('AI News Assistant: window.askFollowUp not available during click');
+            }
+          });
+          console.log(`AI News Assistant: Added event listener to button ${index}: ${question}`);
+        }
+      });
+      
+      // Also add listener to custom question button
+      const customButton = contentElement.querySelector('button[onclick="askCustomFollowUp()"]');
+      if (customButton) {
+        customButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          console.log('AI News Assistant: Custom question button clicked via event listener');
+          if (typeof window.askCustomFollowUp === 'function') {
+            window.askCustomFollowUp();
+          }
+        });
+        console.log('AI News Assistant: Added event listener to custom question button');
+      }
+    }, 100);
   }
   
   // Create collapsible section
