@@ -143,19 +143,75 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Function to call backend API for summarization
+// Function to call backend API for summarization with configurable URL
 async function summarizeWithAI(articleData) {
-  const response = await fetch('http://localhost:3001/api/summarize', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(articleData)
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  try {
+    // Load configuration to get the correct API URL
+    const config = await loadExtensionConfig();
+    const apiUrl = config.getApiUrl('summarize');
+    
+    console.log('Making API request to:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(articleData),
+      // Add timeout support
+      signal: AbortSignal.timeout(config.api.timeout)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error ${response.status}: ${errorText}`);
+    }
+    
+    return await response.json();
+    
+  } catch (error) {
+    // Enhanced error handling with specific error types
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please try again');
+    } else if (error.message.includes('fetch')) {
+      throw new Error('Network error - unable to connect to backend service');
+    } else {
+      throw error;
+    }
+  }
+}
+
+// Load extension configuration
+async function loadExtensionConfig() {
+  // Import config dynamically to avoid circular dependencies
+  if (typeof EXTENSION_CONFIG === 'undefined') {
+    // For service workers, we'll define a minimal config inline
+    const config = {
+      api: {
+        baseUrl: 'http://localhost:3001',
+        timeout: 30000,
+        endpoints: {
+          summarize: '/api/summarize',
+          health: '/api/health'
+        }
+      },
+      getApiUrl(endpoint) {
+        return `${this.api.baseUrl}${this.api.endpoints[endpoint]}`;
+      }
+    };
+    
+    // Try to load from storage
+    try {
+      const stored = await chrome.storage.sync.get(['apiBaseUrl']);
+      if (stored.apiBaseUrl) {
+        config.api.baseUrl = stored.apiBaseUrl;
+      }
+    } catch (error) {
+      console.warn('Could not load API URL from storage:', error);
+    }
+    
+    return config;
   }
   
-  return await response.json();
+  return await EXTENSION_CONFIG.loadConfig();
 }

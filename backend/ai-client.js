@@ -3,13 +3,24 @@ const cloudscraper = require('cloudscraper');
 
 class AINewsClient {
     constructor() {
-        this.API_URL = 'https://enjoyed-boss-grouse.ngrok-free.app/v1/chat/completions';
-        this.BEARER_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjE5MzQ0ZTY1LWJiYzktNDRkMS1hOWQwLWY5NTdiMDc5YmQwZSIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS92MSJdLCJhenAiOiJUZEpJY2JlMTZXb1RIdE45NW55eXdoNUU0eU9vNkl0RyIsImNsaWVudF9pZCI6ImFwcF9YOHpZNnZXMnBROXRSM2RFN25LMWpMNWdIIiwiZXhwIjoxNzU2NDMwODEwLCJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOnsicG9pZCI6Im9yZy1keUdxajI0OW9ualNUNUZTVkJUeUN4WHkiLCJ1c2VyX2lkIjoidXNlci1QOU5acWdCMEtmSXFscmE4NEh6eG9BWnEifSwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9wcm9maWxlIjp7ImVtYWlsIjoieGlhbmd6aGUueWFvQHVjb25uLmVkdSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwiaWF0IjoxNzU1NTY2ODA5LCJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbSIsImp0aSI6ImUwNjNjOWU0LTc1MjktNDIwMC1hZTViLWRjMWFjMDRiYTQyMSIsIm5iZiI6MTc1NTU2NjgwOSwicHdkX2F1dGhfdGltZSI6MTc0NDI3MjgzNjg1MCwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCBwaG9uZSBlbWFpbF9jb2RlX3ZlcmlmaWNhdGlvbiIsInNjcCI6WyJvcGVuaWQiLCJlbWFpbCIsInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyIsIm1vZGVsLnJlcXVlc3QiLCJtb2RlbC5yZWFkIiwib3JnYW5pemF0aW9uLnJlYWQiLCJvcmdhbml6YXRpb24ud3JpdGUiXSwic2Vzc2lvbl9pZCI6ImF1dGhzZXNzX3Y0d0lRM2hGTkhqbnJLbWU5aTVnVnF5cCIsInN1YiI6ImF1dGgwfDYzZGI4ZWQ4NzRmOTRhYzUyYmJlY2U0ZiJ9.6C05m0T6Xqm5XTm2QGWuCZ-XS8HaeAdbp-fi42OGAw1mpZ2znktdGjQlq5HY4UYURYMUqMFYpm42fXxYLxVSpiZovfr9MgSP-ssDGfWl9CBPNj1OL7iIBsUY7Z5lDiHgvI4V7IT4qe3lunpuTmr9yM7Csw5WCR-qr7o4X5VAVSQ6mddwnyE5GoBRKWUcbB-65NBeMtP_m7Iu08zb2dpJFg6Exed4g-XobguTWZxCDYp2iU-_EFEEiGB7TVxE4AR90BzgVB4jjxRQgYux9Tqqf6KJsHj2MUzr4CdF6uVDZuk7YevwX5NeQcepHz4vqJNVTKfvkUn7Z-J8f_vfxK9nQNXd-bdQjCQZ92mHQ-tUEZiUspY-G17y1XUfVXFg2_8JIQQitnwB6L4jPARfqmygeqqOX4KM10jQrAkkFRLMsQEx5Kqij2j4v2PZ6HvPpYRdEje7Gc6FMBdvfHuiTg6yAZlr2hm_WGCkuReaQqV6yuUKFQYENcKfJs7NrhEw8M-5LUhNMkk1RQ_RWAmipoy6aTLDiWAo5ZW77U2LjucRdw50dYL1P-y_QRYIuPN_pS_n-P_ZkOPjl-d29OuIcLBmzlZMesAtwa0DNXjrq_XN0DPrrSUOsqq9WhC1i6d-4g1Jy3xMHcLYzJUzojk-mDpMc4An_v5iAMCXrbjVlv0n_EY';
+        // Load configuration from environment variables with fallback defaults
+        this.API_URL = process.env.API_URL || 'https://enjoyed-boss-grouse.ngrok-free.app/v1/chat/completions';
+        this.BEARER_TOKEN = process.env.BEARER_TOKEN;
+        this.DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'o3';
+        this.FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'o1-high';
+        
+        // Validate required credentials
+        if (!this.BEARER_TOKEN) {
+            throw new Error('BEARER_TOKEN environment variable is required. Please check your .env file.');
+        }
+        
         this.scraper = cloudscraper.defaults({
             headers: {
                 'User-Agent': 'Mozilla/5.0 (compatible; AINewsAssistant/1.0)'
             }
         });
+        
+        console.log('AI Client initialized with API URL:', this.API_URL.replace(/\/[^/]*$/, '/***'));
     }
 
     generateSummaryPrompt(articleData, preferences) {
@@ -108,7 +119,9 @@ Please ensure the response is valid JSON that can be parsed.`;
         return prompt;
     }
 
-    async getChatCompletion(messageContent, model = 'o3') {
+    async getChatCompletion(messageContent, model = null) {
+        // Use provided model or default from environment
+        const selectedModel = model || this.DEFAULT_MODEL;
         if (!this.BEARER_TOKEN) {
             throw new Error('Bearer token not found');
         }
@@ -121,14 +134,14 @@ Please ensure the response is valid JSON that can be parsed.`;
         };
 
         const data = {
-            model: model,
+            model: selectedModel,
             messages: [{ role: 'user', content: messageContent }],
             stream: false
         };
 
         try {
             const startTime = Date.now();
-            console.log(`Starting AI request with model: ${model}`);
+            console.log(`Starting AI request with model: ${selectedModel}`);
             
             const response = await this.scraper({
                 method: 'POST',

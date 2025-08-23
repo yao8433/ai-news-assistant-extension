@@ -1,16 +1,24 @@
 {
   "name": "ai-news-assistant-extension",
-  "version": "1.0.0",
-  "description": "Chrome extension for AI-powered news article summarization",
-  "main": "test-setup.js",
+  "version": "2.0.0",
+  "description": "Chrome extension for AI-powered news article summarization with global coverage and revolutionary right sidebar interface",
+  "main": "src/config.js",
   "scripts": {
-    "test": "node test-setup.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:backend": "cd backend && npm test",
     "validate": "node test-setup.js",
     "create-icons": "node create-icons.js",
     "backend": "cd backend && npm install && npm start",
     "dev-backend": "cd backend && npm run dev",
     "install-backend": "cd backend && npm install",
-    "build": "npm run create-icons && npm run validate"
+    "install-all": "npm install && npm run install-backend",
+    "build": "npm run create-icons && npm run test && npm run validate",
+    "lint": "eslint src/ backend/ tests/",
+    "lint:fix": "eslint src/ backend/ tests/ --fix",
+    "clean": "rm -rf node_modules backend/node_modules coverage",
+    "dev": "npm run install-all && npm run dev-backend"
   },
   "keywords": [
     "chrome-extension",
@@ -18,19 +26,43 @@
     "news",
     "summarization",
     "nlp",
-    "web-extension"
+    "web-extension",
+    "bloomberg",
+    "international-news",
+    "multilingual",
+    "right-sidebar"
   ],
   "author": "AI News Assistant Team",
   "license": "MIT",
   "devDependencies": {
-    "cloudscraper": "^4.6.0"
+    "cloudscraper": "^4.6.0",
+    "jest": "^29.7.0",
+    "babel-jest": "^29.7.0",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "supertest": "^6.3.3",
+    "jsdom": "^22.1.0",
+    "eslint": "^8.50.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/ai-news-assistant-extension.git"
+    "url": "https://github.com/yao8433/ai-news-assistant-extension.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/ai-news-assistant-extension/issues"
+    "url": "https://github.com/yao8433/ai-news-assistant-extension/issues"
   },
-  "homepage": "https://github.com/your-username/ai-news-assistant-extension#readme"
+  "homepage": "https://github.com/yao8433/ai-news-assistant-extension#readme",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "babel": {
+    "presets": [
+      ["@babel/preset-env", {
+        "targets": {
+          "node": "16"
+        }
+      }]
+    ]
+  }
 }

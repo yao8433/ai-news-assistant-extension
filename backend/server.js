@@ -16,19 +16,40 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration for Chrome extension
+// CORS configuration for Chrome extension security
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['chrome-extension://', 'moz-extension://'];
+
 app.use(cors({
-    origin: true, // Allow all origins for chrome extensions
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin starts with allowed extension protocols
+        const isAllowed = allowedOrigins.some(allowedOrigin => 
+            origin.startsWith(allowedOrigin)
+        );
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.warn(`Blocked CORS request from unauthorized origin: ${origin}`);
+            callback(new Error('Not allowed by CORS policy'));
+        }
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false
 }));
 
-// Rate limiting
+// Rate limiting with configurable settings
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 app.use(limiter);
 
@@ -59,7 +80,7 @@ app.get('/api/health', (req, res) => {
 // Main summarization endpoint
 app.post('/api/summarize', async (req, res) => {
     try {
-        const { title, content, author, date, url, preferences } = req.body;
+        let { title, content, author, date, url, preferences } = req.body;
 
         // Validate required fields
         if (!title || !content) {
@@ -78,6 +99,7 @@ app.post('/api/summarize', async (req, res) => {
         if (content.length > 50000) {
             // Truncate very long content
             content = content.substring(0, 50000) + '...';
+            console.log(`Content truncated to 50000 characters for processing`);
         }
 
         // Default preferences
