@@ -779,6 +779,16 @@
     const contentElement = document.getElementById('summary-content');
     if (!contentElement) return;
     
+    // Initialize interactive features FIRST so functions are available for onclick handlers
+    initializeInteractiveFeatures(summary);
+    
+    // Debug: Verify functions are available
+    console.log('AI News Assistant: Functions available:', {
+      askFollowUp: typeof window.askFollowUp,
+      askCustomFollowUp: typeof window.askCustomFollowUp,
+      toggleSection: typeof window.toggleSection
+    });
+    
     // Detect article type for optimized display
     const articleType = detectArticleType(summary);
     
@@ -928,9 +938,6 @@
         </div>
       </div>
     `;
-    
-    // Initialize interactive features
-    initializeInteractiveFeatures(summary);
   }
   
   // Create collapsible section
@@ -1293,8 +1300,12 @@
   
   // Follow-up Q&A functions
   function askFollowUp(question) {
+    console.log('AI News Assistant: askFollowUp called with question:', question);
     const answerDiv = document.getElementById('followup-answer');
-    if (!answerDiv) return;
+    if (!answerDiv) {
+      console.error('AI News Assistant: followup-answer div not found');
+      return;
+    }
     
     answerDiv.style.display = 'block';
     answerDiv.innerHTML = `
