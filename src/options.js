@@ -15,7 +15,9 @@ class OptionsManager {
             focusArea: 'general',
             language: 'english',
             autoSummarize: true,
-            enableDebugLogs: false
+            enableDebugLogs: false,
+            autoHighlightKeyPoints: true,
+            customSources: ''
         };
         
         this.init();
@@ -85,6 +87,8 @@ class OptionsManager {
             document.getElementById('language').value = settings.language || 'english';
             document.getElementById('autoSummarize').checked = settings.autoSummarize !== false;
             document.getElementById('enableDebugLogs').checked = settings.enableDebugLogs === true;
+            document.getElementById('autoHighlightKeyPoints').checked = settings.autoHighlightKeyPoints !== false;
+            document.getElementById('customSources').value = settings.customSources || '';
             
             console.log('Settings loaded:', settings);
         } catch (error) {
@@ -159,7 +163,9 @@ class OptionsManager {
             focusArea: document.getElementById('focusArea').value,
             language: document.getElementById('language').value,
             autoSummarize: document.getElementById('autoSummarize').checked,
-            enableDebugLogs: document.getElementById('enableDebugLogs').checked
+            enableDebugLogs: document.getElementById('enableDebugLogs').checked,
+            autoHighlightKeyPoints: document.getElementById('autoHighlightKeyPoints').checked,
+            customSources: document.getElementById('customSources').value.trim()
         };
     }
 

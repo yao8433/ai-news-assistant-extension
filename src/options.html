@@ -52,10 +52,13 @@
                 <div class="form-group">
                     <label for="summaryLength">Default Summary Length:</label>
                     <select id="summaryLength">
+                        <option value="brief">Brief (1-2 sentences)</option>
                         <option value="short">Short (2-3 sentences)</option>
                         <option value="medium" selected>Medium (3-4 sentences)</option>
                         <option value="detailed">Detailed (5-7 sentences)</option>
+                        <option value="comprehensive">Comprehensive (8-10 sentences)</option>
                     </select>
+                    <div class="help-text">Choose how detailed you want your AI summaries to be</div>
                 </div>
 
                 <div class="form-group">
@@ -94,6 +97,55 @@
                         <span class="checkmark"></span>
                         Enable debug logging
                     </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="autoHighlightKeyPoints" checked>
+                        <span class="checkmark"></span>
+                        Auto-highlight key points in articles
+                    </label>
+                    <div class="help-text">Automatically highlight important points in the original article text</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🌐 Article Source Detection</h2>
+                
+                <div class="form-group">
+                    <label>Supported News Sources:</label>
+                    <div class="source-grid">
+                        <div class="source-category">
+                            <h4>🇺🇸 US Major</h4>
+                            <div class="source-list">
+                                <span class="source-tag">Bloomberg</span>
+                                <span class="source-tag">Reuters</span>
+                                <span class="source-tag">WSJ</span>
+                                <span class="source-tag">NYT</span>
+                                <span class="source-tag">CNN</span>
+                                <span class="source-tag">BBC</span>
+                            </div>
+                        </div>
+                        <div class="source-category">
+                            <h4>🌍 International</h4>
+                            <div class="source-list">
+                                <span class="source-tag">The Guardian</span>
+                                <span class="source-tag">Telegraph</span>
+                                <span class="source-tag">Le Monde</span>
+                                <span class="source-tag">Der Spiegel</span>
+                                <span class="source-tag">El País</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="help-text">Currently monitoring 150+ news sources across 15 languages</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="customSources">Add Custom News Sources:</label>
+                    <textarea id="customSources" placeholder="Enter additional news site URLs, one per line:
+https://example-news.com/*
+https://custom-blog.com/articles/*" rows="4"></textarea>
+                    <div class="help-text">Add custom news sites to monitor. Use * for wildcard matching.</div>
                 </div>
             </div>
 

@@ -7,69 +7,108 @@ chrome.runtime.onInstalled.addListener(() => {
     summaryLength: 'medium',
     focusArea: 'general',
     language: 'english',
-    autoSummarize: true
+    autoSummarize: true,
+    autoHighlightKeyPoints: true,
+    customSources: ''
   });
 });
 
+// Check if URL matches news patterns (including custom sources)
+async function isNewsArticle(url) {
+  const defaultNewsPatterns = [
+    // US Major News Sites
+    /bloomberg\.com\/(news|opinion|technology|markets|businessweek)/,
+    /reuters\.com.*(\/article|\/world|\/business|\/technology|\/politics)/,
+    /bbc\.com\/(news|sport|business|technology)/,
+    /cnn\.com.*\/(politics|business|tech|world|us)/,
+    /wsj\.com\/(articles|business|politics|tech|markets)/,
+    /ft\.com\/(content|news|markets|business)/,
+    /nytimes\.com.*\/(business|technology|politics|world|us)/,
+    /washingtonpost\.com.*\/(business|technology|politics|world|national)/,
+    /usatoday\.com\/(news|money|tech|politics)/,
+    /latimes\.com.*(business|world|politics|california)/,
+    /chicagotribune\.com\/(news|business|politics)/,
+    /bostonglobe\.com\/(news|business|metro|opinion)/,
+    /seattletimes\.com\/(business|nation-world|seattle-news|politics)/,
+    /dallasnews\.com\/(business|news|politics)/,
+    /thehill\.com\/(policy|business|technology|news)/,
+    // US Regional Sites (selected major ones)
+    /oregonlive\.com\/(news|business|politics)/,
+    /cleveland\.com\/(news|business|politics)/,
+    /miamiherald\.com\/(news|business|politics)/,
+    /charlotteobserver\.com\/(news|business|politics)/,
+    /denverpost\.com\/(news|business|politics)/,
+    /mercurynews\.com\/(news|business|politics)/,
+    /houstonchronicle\.com\/(news|business|politics)/,
+    /sfchronicle\.com\/(news|business|politics)/,
+    // International - UK
+    /theguardian\.com\/(news|business|politics|world|uk-news)/,
+    /independent\.co\.uk\/(news|business|politics|world)/,
+    /telegraph\.co\.uk\/(news|business|politics|world)/,
+    /thetimes\.co\.uk\/(news|business|politics|world)/,
+    /economist\.com\/(news|business|politics|world|finance)/,
+    /dailymail\.co\.uk\/(news|business|politics|world)/,
+    // International - French
+    /lemonde\.fr\/(economie|politique|international|actualites)/,
+    /lefigaro\.fr\/(economie|politique|international|actualites)/,
+    /liberation\.fr\/(economie|politique|international|actualites)/,
+    // International - German
+    /spiegel\.de\/(wirtschaft|politik|panorama|international)/,
+    /zeit\.de\/(wirtschaft|politik|gesellschaft|international)/,
+    /welt\.de\/(wirtschaft|politik|vermischtes|ausland)/,
+    /sueddeutsche\.de\/(wirtschaft|politik|panorama|international)/,
+    // International - Italian
+    /corriere\.it\/(economia|politica|cronache|esteri)/,
+    /repubblica\.it\/(economia|politica|cronaca|esteri)/,
+    // International - Spanish
+    /elpais\.com\/(economia|politica|internacional|espana)/,
+    /elmundo\.es\/(economia|politica|internacional|espana)/,
+    // International - Dutch
+    /telegraaf\.nl\/(nieuws|financieel|sport)/,
+    /volkskrant\.nl\/(nieuws|economie|buitenland)/
+  ];
+  
+  // Check default patterns first
+  if (defaultNewsPatterns.some(pattern => pattern.test(url))) {
+    return true;
+  }
+  
+  // Check custom sources from user settings
+  try {
+    const settings = await chrome.storage.sync.get(['customSources']);
+    const customSources = settings.customSources || '';
+    
+    if (customSources.trim()) {
+      const customPatterns = customSources
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#'))
+        .map(pattern => {
+          // Convert wildcard pattern to regex
+          const escapedPattern = pattern
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            .replace(/\\\*/g, '.*');
+          return new RegExp(escapedPattern, 'i');
+        });
+      
+      if (customPatterns.some(pattern => pattern.test(url))) {
+        console.log('AI News Assistant: Custom source match found for', url);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('AI News Assistant: Error checking custom sources:', error);
+  }
+  
+  return false;
+}
+
 // Listen for tab updates to check if we're on a news site
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    const newsPatterns = [
-      // US Major News Sites
-      /bloomberg\.com\/(news|opinion|technology|markets|businessweek)/,
-      /reuters\.com.*(\/article|\/world|\/business|\/technology|\/politics)/,
-      /bbc\.com\/(news|sport|business|technology)/,
-      /cnn\.com.*\/(politics|business|tech|world|us)/,
-      /wsj\.com\/(articles|business|politics|tech|markets)/,
-      /ft\.com\/(content|news|markets|business)/,
-      /nytimes\.com.*\/(business|technology|politics|world|us)/,
-      /washingtonpost\.com.*\/(business|technology|politics|world|national)/,
-      /usatoday\.com\/(news|money|tech|politics)/,
-      /latimes\.com.*(business|world|politics|california)/,
-      /chicagotribune\.com\/(news|business|politics)/,
-      /bostonglobe\.com\/(news|business|metro|opinion)/,
-      /seattletimes\.com\/(business|nation-world|seattle-news|politics)/,
-      /dallasnews\.com\/(business|news|politics)/,
-      /thehill\.com\/(policy|business|technology|news)/,
-      // US Regional Sites (selected major ones)
-      /oregonlive\.com\/(news|business|politics)/,
-      /cleveland\.com\/(news|business|politics)/,
-      /miamiherald\.com\/(news|business|politics)/,
-      /charlotteobserver\.com\/(news|business|politics)/,
-      /denverpost\.com\/(news|business|politics)/,
-      /mercurynews\.com\/(news|business|politics)/,
-      /houstonchronicle\.com\/(news|business|politics)/,
-      /sfchronicle\.com\/(news|business|politics)/,
-      // International - UK
-      /theguardian\.com\/(news|business|politics|world|uk-news)/,
-      /independent\.co\.uk\/(news|business|politics|world)/,
-      /telegraph\.co\.uk\/(news|business|politics|world)/,
-      /thetimes\.co\.uk\/(news|business|politics|world)/,
-      /economist\.com\/(news|business|politics|world|finance)/,
-      /dailymail\.co\.uk\/(news|business|politics|world)/,
-      // International - French
-      /lemonde\.fr\/(economie|politique|international|actualites)/,
-      /lefigaro\.fr\/(economie|politique|international|actualites)/,
-      /liberation\.fr\/(economie|politique|international|actualites)/,
-      // International - German
-      /spiegel\.de\/(wirtschaft|politik|panorama|international)/,
-      /zeit\.de\/(wirtschaft|politik|gesellschaft|international)/,
-      /welt\.de\/(wirtschaft|politik|vermischtes|ausland)/,
-      /sueddeutsche\.de\/(wirtschaft|politik|panorama|international)/,
-      // International - Italian
-      /corriere\.it\/(economia|politica|cronache|esteri)/,
-      /repubblica\.it\/(economia|politica|cronaca|esteri)/,
-      // International - Spanish
-      /elpais\.com\/(economia|politica|internacional|espana)/,
-      /elmundo\.es\/(economia|politica|internacional|espana)/,
-      // International - Dutch
-      /telegraaf\.nl\/(nieuws|financieel|sport)/,
-      /volkskrant\.nl\/(nieuws|economie|buitenland)/
-    ];
+    const isNews = await isNewsArticle(tab.url);
     
-    const isNewsArticle = newsPatterns.some(pattern => pattern.test(tab.url));
-    
-    if (isNewsArticle) {
+    if (isNews) {
       // Enable side panel for this tab
       chrome.sidePanel.setOptions({
         tabId,

@@ -449,7 +449,101 @@
     
     // Add visual indicator that article was processed
     addProcessedIndicator();
+    
+    // Check user settings for auto-highlighting
+    checkAutoHighlightSettings();
+    
     console.log('AI News Assistant: Article processed successfully');
+  }
+  
+  // Check user settings and apply auto-highlighting if enabled
+  async function checkAutoHighlightSettings() {
+    try {
+      const settings = await chrome.storage.sync.get([
+        'autoHighlightKeyPoints',
+        'summaryLength',
+        'focusArea'
+      ]);
+      
+      if (settings.autoHighlightKeyPoints !== false) {
+        console.log('AI News Assistant: Auto-highlighting enabled');
+        
+        // Listen for when summary becomes available
+        chrome.runtime.onMessage.addListener(function handleSummaryReady(message) {
+          if (message.action === 'contentReady' && message.data?.highlights) {
+            console.log('AI News Assistant: Auto-highlighting key points');
+            
+            // Wait a bit for summary to be displayed, then highlight
+            setTimeout(() => {
+              autoHighlightArticlePoints(message.data.highlights);
+            }, 1500);
+            
+            // Remove this listener after use
+            chrome.runtime.onMessage.removeListener(handleSummaryReady);
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('AI News Assistant: Error checking auto-highlight settings:', error);
+    }
+  }
+  
+  // Auto-highlight key points in the article when summary is ready
+  function autoHighlightArticlePoints(highlights) {
+    if (!highlights || highlights.length === 0) return;
+    
+    console.log('AI News Assistant: Auto-highlighting', highlights.length, 'key points');
+    
+    // Use the existing highlight function with a slight delay between highlights
+    highlights.forEach((highlight, index) => {
+      setTimeout(() => {
+        highlightTextInArticle(highlight, `auto-highlight-${index}`);
+      }, index * 300); // Stagger highlights for visual effect
+    });
+    
+    // Show notification that auto-highlighting occurred
+    showAutoHighlightNotification(highlights.length);
+  }
+  
+  // Show notification that auto-highlighting occurred
+  function showAutoHighlightNotification(count) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    notification.innerHTML = `✨ Auto-highlighted ${count} key points`;
+    document.body.appendChild(notification);
+    
+    // Add animation CSS if not already present
+    if (!document.querySelector('#ai-highlight-animations')) {
+      const style = document.createElement('style');
+      style.id = 'ai-highlight-animations';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+      notification.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
   
   // Add visual indicator
