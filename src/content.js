@@ -617,6 +617,11 @@
           50% { transform: scale(1.05); }
         }
         
+        @keyframes aiPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
         /* Smooth scroll behavior for summary panel */
         #ai-summary-panel {
           transition: all 0.3s ease-in-out;
@@ -1304,7 +1309,7 @@
           justify-content: center;
           color: white;
           font-size: 10px;
-          animation: pulse 1.5s infinite;
+          animation: aiPulse 1.5s infinite;
         ">🤔</div>
         <div style="font-weight: 600; color: #0073e6;">AI is thinking...</div>
       </div>
@@ -1325,9 +1330,9 @@
     questionInput.value = '';
   }
   
-  async function sendFollowUpQuestion(question, answerDiv) {
+  function sendFollowUpQuestion(question, answerDiv) {
     try {
-      const response = await chrome.runtime.sendMessage({
+      chrome.runtime.sendMessage({
         action: 'askFollowUp',
         data: {
           question: question,
@@ -1338,35 +1343,52 @@
             url: window.location.href
           }
         }
-      });
-      
-      if (response && response.success) {
-        answerDiv.innerHTML = `
-          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;">
-            <div style="
-              width: 20px;
-              height: 20px;
-              background: #28a745;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              font-size: 10px;
-              flex-shrink: 0;
-              margin-top: 2px;
-            ">🤖</div>
-            <div>
-              <div style="font-weight: 600; color: #28a745; margin-bottom: 4px;">AI Assistant:</div>
-              <div style="color: #666; font-style: italic; font-size: 13px; margin-bottom: 8px;">Question: ${question}</div>
-              <div>${response.answer}</div>
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('AI Follow-up: Runtime error:', chrome.runtime.lastError.message);
+          answerDiv.innerHTML = `
+            <div style="color: #dc3545; font-size: 13px;">
+              ❌ Extension communication error. Please refresh the page and try again.
             </div>
-          </div>
-        `;
-      } else {
-        throw new Error(response?.error || 'Failed to get AI response');
-      }
+          `;
+          return;
+        }
+        
+        if (response && response.success) {
+          answerDiv.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;">
+              <div style="
+                width: 20px;
+                height: 20px;
+                background: #28a745;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 10px;
+                flex-shrink: 0;
+                margin-top: 2px;
+              ">🤖</div>
+              <div>
+                <div style="font-weight: 600; color: #28a745; margin-bottom: 4px;">AI Assistant:</div>
+                <div style="color: #666; font-style: italic; font-size: 13px; margin-bottom: 8px;">Question: ${question}</div>
+                <div style="line-height: 1.6;">${response.answer}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          const errorMessage = response?.error || 'Failed to get AI response';
+          console.error('AI Follow-up: API error:', errorMessage);
+          answerDiv.innerHTML = `
+            <div style="color: #dc3545; font-size: 13px;">
+              ❌ ${errorMessage}
+            </div>
+          `;
+        }
+      });
     } catch (error) {
+      console.error('AI Follow-up: Error sending question:', error);
       answerDiv.innerHTML = `
         <div style="color: #dc3545; font-size: 13px;">
           ❌ Sorry, I couldn't process that question right now. Please try again later.
