@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Assistant</title>
+    <link rel="stylesheet" href="sidepanel.css">
+    <script src="i18n.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🤖</span>
+                <h1>AI News Assistant</h1>
+            </div>
+            <div class="settings-btn" id="settingsBtn">⚙️</div>
+        </header>
+
+        <div class="content">
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner"></div>
+                <p>Analyzing article...</p>
+            </div>
+
+            <!-- No Article State -->
+            <div id="noArticleState" class="no-article-state" style="display: none;">
+                <div class="empty-icon">📰</div>
+                <h3>No Article Detected</h3>
+                <p>Navigate to a news article to get an AI-powered summary.</p>
+                <div class="supported-sites">
+                    <h4>Supported Sites:</h4>
+                    <ul>
+                        <li>Bloomberg</li>
+                        <li>Reuters</li>
+                        <li>BBC News</li>
+                        <li>CNN</li>
+                        <li>Wall Street Journal</li>
+                        <li>Financial Times</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Article Summary -->
+            <div id="summaryState" class="summary-state" style="display: none;">
+                <div class="article-info">
+                    <h2 id="articleTitle"></h2>
+                    <div class="meta-info">
+                        <span id="articleAuthor"></span>
+                        <span id="articleDate"></span>
+                        <span id="articleSource"></span>
+                    </div>
+                </div>
+
+                <div class="summary-controls">
+                    <div class="length-selector">
+                        <label>Summary Length:</label>
+                        <select id="summaryLength">
+                            <option value="short">Short</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="detailed">Detailed</option>
+                        </select>
+                    </div>
+                    <button id="regenerateBtn" class="regenerate-btn">↻ Regenerate</button>
+                </div>
+
+                <div class="summary-content">
+                    <div class="summary-section">
+                        <h3>Summary</h3>
+                        <div id="summaryText" class="summary-text"></div>
+                    </div>
+
+                    <div class="highlights-section">
+                        <h3>Key Highlights</h3>
+                        <ul id="highlightsList" class="highlights-list"></ul>
+                    </div>
+
+                    <div class="insights-section" id="insightsSection" style="display: none;">
+                        <h3>Insights</h3>
+                        <div id="insightsText" class="insights-text"></div>
+                    </div>
+                </div>
+
+                <div class="feedback-section">
+                    <p>Was this summary helpful?</p>
+                    <div class="feedback-buttons">
+                        <button id="thumbsUp" class="feedback-btn">👍</button>
+                        <button id="thumbsDown" class="feedback-btn">👎</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h3>Unable to Generate Summary</h3>
+                <p id="errorMessage"></p>
+                <button id="retryBtn" class="retry-btn">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="settings-panel" style="display: none;">
+            <div class="settings-header">
+                <h3>Preferences</h3>
+                <button id="closeSettings" class="close-btn">×</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-group">
+                    <label for="focusArea">Focus Area:</label>
+                    <select id="focusArea">
+                        <option value="general">General</option>
+                        <option value="economic">Economic</option>
+                        <option value="political">Political</option>
+                        <option value="social">Social</option>
+                        <option value="technology">Technology</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="english">English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="chinese">Chinese</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="autoSummarize" checked>
+                        Auto-summarize articles
+                    </label>
+                </div>
+
+                <button id="saveSettings" class="save-btn">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>

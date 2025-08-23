@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-08-22T14:47:06.524Z",
+  "summary": {
+    "total_checks": 24,
+    "successful": 22,
+    "warnings": 1,
+    "errors": 1
+  },
+  "details": {
+    "successes": [
+      "Manifest validation completed",
+      "Found src/background.js",
+      "Found src/content.js",
+      "Found src/content.css",
+      "Found src/sidepanel.html",
+      "Found src/sidepanel.css",
+      "Found src/sidepanel.js",
+      "Found src/popup.html",
+      "Found src/popup.js",
+      "Found src/i18n.js",
+      "Found src/utils.js",
+      "Found icon16.svg",
+      "Found icon32.svg",
+      "Found icon48.svg",
+      "Found icon128.svg",
+      "Found backend/package.json",
+      "Found backend/server.js",
+      "Found backend/ai-client.js",
+      "Backend dependency found: express",
+      "Backend dependency found: cors",
+      "Backend dependency found: cloudscraper",
+      "Backend dependency found: helmet"
+    ],
+    "warnings": [
+      "This might be due to network issues or API credentials"
+    ],
+    "errors": [
+      "AI API connection failed: cloudscraper.create_scraper is not a function"
+    ]
+  }
+}

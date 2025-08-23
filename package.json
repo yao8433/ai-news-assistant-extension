@@ -1,0 +1,36 @@
+{
+  "name": "ai-news-assistant-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for AI-powered news article summarization",
+  "main": "test-setup.js",
+  "scripts": {
+    "test": "node test-setup.js",
+    "validate": "node test-setup.js",
+    "create-icons": "node create-icons.js",
+    "backend": "cd backend && npm install && npm start",
+    "dev-backend": "cd backend && npm run dev",
+    "install-backend": "cd backend && npm install",
+    "build": "npm run create-icons && npm run validate"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "news",
+    "summarization",
+    "nlp",
+    "web-extension"
+  ],
+  "author": "AI News Assistant Team",
+  "license": "MIT",
+  "devDependencies": {
+    "cloudscraper": "^4.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/ai-news-assistant-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/ai-news-assistant-extension/issues"
+  },
+  "homepage": "https://github.com/your-username/ai-news-assistant-extension#readme"
+}
