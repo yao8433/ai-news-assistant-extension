@@ -315,12 +315,13 @@ async function handleFollowUpQuestion(data) {
   
   // Prepare request data with optional API config
   const requestData = {
-    title: `Follow-up: ${data.context.title}`,
+    title: `Q&A: ${data.question}`,
     content: followUpPrompt,
     preferences: {
-      summaryLength: 'medium',
+      summaryLength: 'detailed', // Use detailed for better Q&A responses
       focusArea: 'general', 
-      language: 'english'
+      language: 'english',
+      mode: 'qa' // Signal this is Q&A mode
     }
   };
   
@@ -355,25 +356,27 @@ async function handleFollowUpQuestion(data) {
 
 // Create optimized prompt for follow-up questions
 function createFollowUpPrompt(question, context) {
-  return `You are an AI assistant helping users understand news articles in more depth. 
+  return `IMPORTANT: This is a FOLLOW-UP QUESTION, not an article to summarize. Please provide a direct answer to the specific question asked.
 
-CONTEXT:
-Article Title: ${context.title}
-Original Summary: ${context.summary}
-Key Highlights: ${context.highlights ? context.highlights.join('; ') : 'None provided'}
-Article URL: ${context.url}
+===== FOLLOW-UP Q&A MODE =====
 
-USER QUESTION: ${question}
+ARTICLE CONTEXT:
+Title: ${context.title}
+Summary: ${context.summary}
+Key Points: ${context.highlights ? context.highlights.join('; ') : 'None provided'}
 
-Please provide a clear, concise, and informative answer to the user's question based on the article context. Focus on:
-1. Directly answering the specific question asked
-2. Providing relevant details from the article context
-3. Offering insights that help the user understand the broader implications
-4. Keeping the response conversational and accessible
+SPECIFIC QUESTION TO ANSWER: "${question}"
 
-If the question cannot be fully answered from the provided context, acknowledge this and provide what relevant information you can, then suggest what additional information might be needed.
+INSTRUCTIONS:
+- This is NOT an article summarization task
+- Provide a direct, specific answer to the question: "${question}"
+- Focus specifically on what the user asked about
+- Use the article context to give relevant, detailed insights
+- For market impact questions: discuss effects on stocks, bonds, Fed policy, economic sectors
+- For implications questions: discuss political, economic, or policy consequences
+- For investor questions: discuss what investors should monitor and potential investment impacts
 
-Response (in plain text, conversational tone):`;
+ANSWER (be direct and specific to the question asked):`;
 }
 
 // Store user feedback for analysis
