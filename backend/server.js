@@ -58,7 +58,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Initialize AI client
-const aiClient = new AINewsClient();
+let aiClient = new AINewsClient();
 
 // Health check endpoints
 app.get('/health', (req, res) => {
@@ -77,10 +77,42 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Update AI client configuration
+app.post('/api/config/ai', async (req, res) => {
+    try {
+        const { apiUrl, bearerToken, defaultModel, fallbackModel } = req.body;
+        
+        if (!apiUrl || !bearerToken) {
+            return res.status(400).json({
+                error: 'API URL and Bearer Token are required'
+            });
+        }
+        
+        // Create new AI client with updated configuration
+        aiClient = new AINewsClient(apiUrl, bearerToken, defaultModel, fallbackModel);
+        
+        res.json({
+            message: 'AI client configuration updated successfully',
+            config: {
+                apiUrl: apiUrl.replace(/\/[^/]*$/, '/***'), // Mask URL for security
+                defaultModel: defaultModel || 'gpt-4',
+                fallbackModel: fallbackModel || ''
+            }
+        });
+        
+    } catch (error) {
+        console.error('Configuration update error:', error);
+        res.status(500).json({
+            error: 'Failed to update AI client configuration',
+            details: error.message
+        });
+    }
+});
+
 // Main summarization endpoint
 app.post('/api/summarize', async (req, res) => {
     try {
-        let { title, content, author, date, url, preferences } = req.body;
+        let { title, content, author, date, url, preferences, apiConfig } = req.body;
 
         // Validate required fields
         if (!title || !content) {
@@ -110,6 +142,13 @@ app.post('/api/summarize', async (req, res) => {
         };
 
         const finalPreferences = { ...defaultPreferences, ...preferences };
+        
+        // If API config is provided, create a temporary client
+        let clientToUse = aiClient;
+        if (apiConfig && apiConfig.apiUrl && apiConfig.bearerToken) {
+            console.log('Using custom API configuration for this request');
+            clientToUse = new AINewsClient(apiConfig.apiUrl, apiConfig.bearerToken, apiConfig.defaultModel, apiConfig.fallbackModel);
+        }
 
         console.log(`Summarizing article: "${title}" (${content.length} chars) with preferences:`, finalPreferences);
 
@@ -124,7 +163,7 @@ app.post('/api/summarize', async (req, res) => {
 
         // Generate summary using AI client
         const startTime = Date.now();
-        const summary = await aiClient.summarizeArticle(articleData, finalPreferences);
+        const summary = await clientToUse.summarizeArticle(articleData, finalPreferences);
         const duration = Date.now() - startTime;
 
         console.log(`Summary generated in ${duration}ms`);

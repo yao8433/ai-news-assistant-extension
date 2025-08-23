@@ -45,17 +45,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // Open settings (could open side panel settings or options page)
+    // Open settings (options page)
     openSettingsBtn.addEventListener('click', async () => {
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            await chrome.sidePanel.open({ tabId: tab.id });
-            
-            // Send message to show settings in side panel
-            setTimeout(() => {
-                chrome.runtime.sendMessage({ action: 'showSettings' });
-            }, 500);
-            
+            // Open the extension's options page
+            await chrome.runtime.openOptionsPage();
             window.close();
         } catch (error) {
             console.error('Error opening settings:', error);

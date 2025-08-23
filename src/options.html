@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Assistant - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI News Assistant Settings</h1>
+            <p>Configure your AI API settings and preferences</p>
+        </header>
+
+        <main>
+            <div class="section">
+                <h2>🔧 API Configuration</h2>
+                <div class="warning-box">
+                    <p>⚠️ <strong>Important:</strong> Your API credentials are stored securely in your browser's local storage and never shared.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiUrl">API URL:</label>
+                    <input type="url" id="apiUrl" placeholder="https://your-api-endpoint.com/v1/chat/completions" required>
+                    <div class="help-text">Enter your AI API endpoint URL (OpenAI compatible format)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bearerToken">Bearer Token:</label>
+                    <input type="password" id="bearerToken" placeholder="Enter your API key/token" required>
+                    <div class="help-text">Your API authentication token (will be masked for security)</div>
+                    <button type="button" id="toggleToken" class="secondary-btn">👁️ Show</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="defaultModel">Default AI Model:</label>
+                    <input type="text" id="defaultModel" placeholder="gpt-4, claude-3-sonnet, etc." value="gpt-4">
+                    <div class="help-text">The AI model to use for summarization</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fallbackModel">Fallback Model (Optional):</label>
+                    <input type="text" id="fallbackModel" placeholder="gpt-3.5-turbo, etc.">
+                    <div class="help-text">Model to use if default model fails</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>⚙️ Extension Preferences</h2>
+                
+                <div class="form-group">
+                    <label for="summaryLength">Default Summary Length:</label>
+                    <select id="summaryLength">
+                        <option value="short">Short (2-3 sentences)</option>
+                        <option value="medium" selected>Medium (3-4 sentences)</option>
+                        <option value="detailed">Detailed (5-7 sentences)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="focusArea">Default Focus Area:</label>
+                    <select id="focusArea">
+                        <option value="general" selected>General</option>
+                        <option value="economic">Economic</option>
+                        <option value="political">Political</option>
+                        <option value="social">Social</option>
+                        <option value="technology">Technology</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="language">Default Language:</label>
+                    <select id="language">
+                        <option value="english" selected>English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="italian">Italian</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="autoSummarize" checked>
+                        <span class="checkmark"></span>
+                        Auto-summarize articles on page load
+                    </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="enableDebugLogs">
+                        <span class="checkmark"></span>
+                        Enable debug logging
+                    </label>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🧪 Test Configuration</h2>
+                <button type="button" id="testConnection" class="secondary-btn">Test API Connection</button>
+                <div id="testResult" class="test-result"></div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="button-group">
+                <button type="button" id="saveSettings" class="primary-btn">💾 Save Settings</button>
+                <button type="button" id="resetSettings" class="danger-btn">🔄 Reset to Defaults</button>
+            </div>
+            <div id="statusMessage" class="status-message"></div>
+        </footer>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

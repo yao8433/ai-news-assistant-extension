@@ -113,15 +113,6 @@ afterEach(() => {
   
   // Clear DOM
   document.body.innerHTML = '';
-  
-  // Reset window location
-  Object.defineProperty(window, 'location', {
-    value: {
-      href: 'https://example.com',
-      hostname: 'example.com'
-    },
-    writable: true
-  });
 });
 
 // Global test timeout

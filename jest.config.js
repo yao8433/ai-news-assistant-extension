@@ -53,8 +53,8 @@ module.exports = {
   // Clear mocks between tests
   clearMocks: true,
   
-  // Mock patterns
-  moduleNameMapping: {
+  // Module name mapping (corrected from moduleNameMapping)
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@backend/(.*)$': '<rootDir>/backend/$1'
   }

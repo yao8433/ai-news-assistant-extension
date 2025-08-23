@@ -4,8 +4,16 @@ A Chrome extension that automatically extracts news articles and provides AI-pow
 
 ## 🚀 Key Features
 
-- 🌍 **Global News Coverage**: Supports 100+ major international news sites including Bloomberg, Reuters, BBC, CNN, New York Times, The Guardian, Le Monde, Der Spiegel, and many more
-- 🤖 **Advanced AI Summarization**: Uses your existing o3 model API for high-quality, context-aware summaries
+### 🆕 NEW in v2.1.0: User-Configurable API Settings
+- 🔧 **Custom API Configuration**: Users can configure their own AI API endpoints through a beautiful options page
+- 🔐 **Secure Token Management**: Bearer tokens are securely stored and masked in the interface
+- 🧪 **Connection Testing**: Built-in API testing to verify configuration before saving
+- 🌍 **API Freedom**: Use any OpenAI-compatible API (OpenAI, Anthropic, local models, enterprise endpoints)
+- 💰 **Cost Control**: Manage your own API keys and usage directly
+
+### Core Features
+- 🌍 **Global News Coverage**: Supports 27+ major international news sites including Bloomberg, Reuters, BBC, CNN, New York Times, The Guardian, Le Monde, Der Spiegel, and many more
+- 🤖 **Advanced AI Summarization**: High-quality, context-aware summaries using your preferred AI model
 - 📱 **Right Sidebar Innovation**: Revolutionary Bloomberg-style sidebar that utilizes empty page space instead of intrusive overlays
 - 🎛️ **Highly Customizable**: Adjust summary length (Short/Medium/Detailed), focus area (Economic/Political/Social/Technology/General), and language
 - 🌐 **True Multilingual Support**: Works with English, French, German, Spanish, Italian, and Dutch news sources
@@ -38,13 +46,27 @@ The backend will run on `http://localhost:3001` and is pre-configured with your 
 4. Select the `ai-news-assistant-extension` folder
 5. The extension should appear in your toolbar
 
-### 3. Usage
+### 3. Configure Your API (New in v2.1.0!)
+
+1. **Right-click** the extension icon → "Options"
+2. **Enter your API settings**:
+   ```
+   API URL: https://api.openai.com/v1/chat/completions
+   Bearer Token: your-api-key-here
+   Default Model: gpt-4
+   Fallback Model: gpt-3.5-turbo
+   ```
+3. **Test Connection**: Click "🧪 Test API Connection"
+4. **Save Settings**: Click "💾 Save Settings"
+
+### 4. Usage
 
 1. Visit any supported news site (Bloomberg, Reuters, etc.)
 2. Navigate to a news article
 3. The extension will automatically detect the article
-4. Click the extension icon or open the side panel
-5. AI summary will be generated automatically
+4. Look for "🤖 AI Summary Available" indicator
+5. Click the indicator to generate AI summary
+6. Enjoy your personalized summary with your own API!
 
 ## Project Structure
 
@@ -54,31 +76,51 @@ ai-news-assistant-extension/
 ├── src/
 │   ├── background.js         # Service worker
 │   ├── content.js           # Article extraction script
-│   ├── content.css          # Content script styles  
+│   ├── content.css          # Content script styles
+│   ├── options.html         # 🆕 Settings page interface
+│   ├── options.css          # 🆕 Settings page styles
+│   ├── options.js           # 🆕 Settings page functionality
 │   ├── sidepanel.html       # Side panel interface
 │   ├── sidepanel.css        # Side panel styles
 │   ├── sidepanel.js         # Side panel functionality
 │   ├── popup.html           # Extension popup
 │   └── popup.js             # Popup functionality
 ├── backend/
-│   ├── server.js            # Express server
-│   ├── ai-client.js         # Your AI API integration
+│   ├── server.js            # Express server with API config endpoints
+│   ├── ai-client.js         # Dynamic AI API integration
 │   ├── package.json         # Dependencies
 │   └── .env.example         # Environment template
+├── CHANGELOG.md             # 🆕 Version history
+├── TESTING_GUIDE.md         # 🆕 Comprehensive testing guide
 └── README.md
 ```
 
 ## API Integration
 
-The extension uses your existing AI setup:
-- **API URL**: `https://enjoyed-boss-grouse.ngrok-free.app/v1/chat/completions`
-- **Model**: o3 (configurable)
-- **Authentication**: Your existing bearer token
+### 🆕 Flexible API Configuration (v2.1.0)
+Users can now configure their own AI API through the extension:
 
-### Supported Models
-- `o3` (default) - Latest model for high-quality summaries
-- `o1-high` - High-performance alternative
-- Model selection can be modified in `backend/ai-client.js`
+#### Supported APIs
+- **OpenAI**: `https://api.openai.com/v1/chat/completions`
+- **Anthropic**: `https://api.anthropic.com/v1/messages`
+- **Custom/Local**: Any OpenAI-compatible endpoint
+- **Enterprise**: Your organization's API gateway
+
+#### Configuration Options
+- **API URL**: Full endpoint URL for your AI service
+- **Bearer Token**: Your API key (securely stored and masked)
+- **Default Model**: Primary model (e.g., gpt-4, claude-3-sonnet, o3)
+- **Fallback Model**: Backup model for reliability
+- **Connection Testing**: Built-in validation before saving
+
+### Legacy Environment Variables
+Backend still supports environment variables for backward compatibility:
+```bash
+API_URL=https://your-ai-endpoint.com/v1/chat/completions
+BEARER_TOKEN=your_token_here
+DEFAULT_MODEL=gpt-4
+FALLBACK_MODEL=gpt-3.5-turbo
+```
 
 ## Customization Options
 
@@ -100,8 +142,33 @@ The extension uses your existing AI setup:
 
 ## API Endpoints
 
+### 🆕 POST `/api/config/ai`
+Configure AI client settings dynamically
+
+**Request:**
+```json
+{
+  "apiUrl": "https://api.openai.com/v1/chat/completions",
+  "bearerToken": "your-api-key",
+  "defaultModel": "gpt-4",
+  "fallbackModel": "gpt-3.5-turbo"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "AI client configuration updated successfully",
+  "config": {
+    "apiUrl": "https://api.openai.com/***/",
+    "defaultModel": "gpt-4",
+    "fallbackModel": "gpt-3.5-turbo"
+  }
+}
+```
+
 ### POST `/api/summarize`
-Main summarization endpoint
+Main summarization endpoint (now supports custom API config)
 
 **Request:**
 ```json
@@ -115,6 +182,12 @@ Main summarization endpoint
     "summaryLength": "medium",
     "focusArea": "economic",
     "language": "english"
+  },
+  "apiConfig": {
+    "apiUrl": "https://api.openai.com/v1/chat/completions",
+    "bearerToken": "your-api-key",
+    "defaultModel": "gpt-4",
+    "fallbackModel": "gpt-3.5-turbo"
   }
 }
 ```

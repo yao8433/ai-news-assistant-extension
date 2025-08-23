@@ -2,16 +2,16 @@
 const cloudscraper = require('cloudscraper');
 
 class AINewsClient {
-    constructor() {
-        // Load configuration from environment variables with fallback defaults
-        this.API_URL = process.env.API_URL || 'https://enjoyed-boss-grouse.ngrok-free.app/v1/chat/completions';
-        this.BEARER_TOKEN = process.env.BEARER_TOKEN;
-        this.DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'o3';
-        this.FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'o1-high';
+    constructor(apiUrl = null, bearerToken = null, defaultModel = null, fallbackModel = null) {
+        // Load configuration from parameters or environment variables with fallback defaults
+        this.API_URL = apiUrl || process.env.API_URL || 'https://enjoyed-boss-grouse.ngrok-free.app/v1/chat/completions';
+        this.BEARER_TOKEN = bearerToken || process.env.BEARER_TOKEN;
+        this.DEFAULT_MODEL = defaultModel || process.env.DEFAULT_MODEL || 'o3';
+        this.FALLBACK_MODEL = fallbackModel || process.env.FALLBACK_MODEL || 'o1-high';
         
         // Validate required credentials
         if (!this.BEARER_TOKEN) {
-            throw new Error('BEARER_TOKEN environment variable is required. Please check your .env file.');
+            throw new Error('BEARER_TOKEN is required. Please provide it as a parameter or set as environment variable.');
         }
         
         this.scraper = cloudscraper.defaults({

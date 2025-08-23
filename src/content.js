@@ -429,15 +429,20 @@
     }
     
     // Send extracted content to background script
-    chrome.runtime.sendMessage({
-      action: 'extractedContent',
-      data: articleData
-    }).then(response => {
-      console.log('AI News Assistant: Message sent successfully, response:', response);
-    }).catch(error => {
-      console.error('AI News Assistant: Error sending message:', error);
-      // Don't throw error here as it's not critical for the main functionality
-    });
+    try {
+      chrome.runtime.sendMessage({
+        action: 'extractedContent',
+        data: articleData
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('AI News Assistant: Background script not ready (this is normal):', chrome.runtime.lastError.message);
+        } else {
+          console.log('AI News Assistant: Message sent successfully, response:', response);
+        }
+      });
+    } catch (error) {
+      console.log('AI News Assistant: Error sending message (extension may be reloading):', error.message);
+    }
     
     // Mark as processed
     window.aiNewsProcessed = true;
@@ -735,26 +740,20 @@
             language: 'english'
           }
         }
-      }).then((response) => {
+      }, (response) => {
         if (chrome.runtime.lastError) {
-          throw new Error(chrome.runtime.lastError.message);
+          console.error('AI News Assistant: Runtime error:', chrome.runtime.lastError.message);
+          displayError('Extension communication error. Please refresh the page and try again.');
+          return;
         }
         
         if (response && response.success) {
           displaySummary(response.summary);
         } else {
-          displayError(response ? response.error : 'Failed to generate summary');
+          const errorMessage = response ? response.error : 'Failed to generate summary';
+          console.error('AI News Assistant: Summary generation failed:', errorMessage);
+          displayError(errorMessage);
         }
-      }).catch((error) => {
-        console.error('AI News Assistant: Summary generation error:', error);
-        
-        let errorMessage = error.message;
-        if (errorMessage.includes('Extension context invalidated') || 
-            errorMessage.includes('message channel closed')) {
-          errorMessage = 'Extension was reloaded. Please refresh the page and try again.';
-        }
-        
-        displayError(errorMessage);
       });
       
     } catch (error) {

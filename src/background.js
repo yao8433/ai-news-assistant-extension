@@ -108,8 +108,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     }).then(() => {
       console.log('Background: Article stored successfully');
+      
+      // Send success response
+      sendResponse({ success: true, message: 'Content processed successfully' });
     }).catch(error => {
       console.error('Background: Error storing article:', error);
+      sendResponse({ success: false, error: error.message });
     });
     
     // Notify side panel that content is ready
@@ -120,6 +124,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }).catch(error => {
       console.log('Background: No side panel listening (this is normal)');
     });
+    
+    return true; // Keep message channel open for async response
   }
   
   if (request.action === 'summarizeArticle') {
@@ -134,9 +140,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Open side panel for the current tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.sidePanel.open({ tabId: tabs[0].id });
+        chrome.sidePanel.open({ tabId: tabs[0].id }).then(() => {
+          sendResponse({ success: true });
+        }).catch(error => {
+          sendResponse({ success: false, error: error.message });
+        });
+      } else {
+        sendResponse({ success: false, error: 'No active tab found' });
       }
     });
+    return true; // Keep message channel open for async response
+  }
+  
+  if (request.action === 'settingsUpdated') {
+    console.log('Background: Settings updated', request.settings);
+    // Optional: Update backend API configuration
+    if (request.settings.apiUrl && request.settings.bearerToken) {
+      updateBackendApiConfig(request.settings).then(() => {
+        sendResponse({ success: true, message: 'Settings updated successfully' });
+      }).catch(error => {
+        sendResponse({ success: false, error: error.message });
+      });
+      return true; // Keep message channel open for async response
+    } else {
+      sendResponse({ success: true, message: 'Settings saved locally' });
+    }
   }
   
   // Always return true to keep message channel open
@@ -146,18 +174,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Function to call backend API for summarization with configurable URL
 async function summarizeWithAI(articleData) {
   try {
-    // Load configuration to get the correct API URL
+    // Load extension configuration and user settings
     const config = await loadExtensionConfig();
     const apiUrl = config.getApiUrl('summarize');
     
+    // Load user's API configuration
+    const userSettings = await chrome.storage.sync.get(['apiUrl', 'bearerToken', 'defaultModel', 'fallbackModel']);
+    
+    // Prepare request data with optional API config
+    const requestData = { ...articleData };
+    if (userSettings.apiUrl && userSettings.bearerToken) {
+      requestData.apiConfig = {
+        apiUrl: userSettings.apiUrl,
+        bearerToken: userSettings.bearerToken,
+        defaultModel: userSettings.defaultModel,
+        fallbackModel: userSettings.fallbackModel
+      };
+    }
+    
     console.log('Making API request to:', apiUrl);
+    console.log('Using custom API config:', !!userSettings.apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(articleData),
+      body: JSON.stringify(requestData),
       // Add timeout support
       signal: AbortSignal.timeout(config.api.timeout)
     });
@@ -214,4 +257,31 @@ async function loadExtensionConfig() {
   }
   
   return await EXTENSION_CONFIG.loadConfig();
+}
+
+// Update backend API configuration
+async function updateBackendApiConfig(settings) {
+  const config = await loadExtensionConfig();
+  const configUrl = `${config.api.baseUrl}/api/config/ai`;
+  
+  const response = await fetch(configUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      apiUrl: settings.apiUrl,
+      bearerToken: settings.bearerToken,
+      defaultModel: settings.defaultModel,
+      fallbackModel: settings.fallbackModel
+    })
+  });
+  
+  if (response.ok) {
+    console.log('Background: Backend API configuration updated successfully');
+    return { success: true };
+  } else {
+    console.warn('Background: Failed to update backend API configuration:', response.status);
+    throw new Error(`Backend configuration update failed: ${response.status}`);
+  }
 }
