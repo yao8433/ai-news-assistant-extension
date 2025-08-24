@@ -1585,6 +1585,8 @@
     window.highlightSpecificPoint = highlightSpecificPoint;
     window.highlightKeyPointsInArticle = highlightKeyPointsInArticle;
     window.shareOrExportSummary = shareOrExportSummary;
+    window.executeShare = executeShare;
+    window.closeSharingModal = closeSharingModal;
   }
   
   // Toggle collapsible sections
@@ -1942,14 +1944,155 @@
     highlightedElements = [];
   }
   
-  // Share and export functions
+  // Share and export functions with options
   function shareOrExportSummary(buttonElement = null) {
     console.log('AI News Assistant: shareOrExportSummary called');
     
-    const summaryText = formatSummaryForSharing();
-    console.log('AI News Assistant: Summary text prepared, length:', summaryText.length);
+    // Show sharing options modal
+    showSharingOptionsModal(buttonElement);
+  }
+  
+  // Show modal with sharing options
+  function showSharingOptionsModal(buttonElement) {
+    const modal = document.createElement('div');
+    modal.id = 'ai-share-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10003;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    `;
     
-    if (navigator.share) {
+    modal.innerHTML = `
+      <div style="
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        animation: slideUp 0.3s ease-out;
+      ">
+        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin: 0; color: #333; font-size: 18px;">📤 Share Article</h3>
+          <button onclick="closeSharingModal()" style="
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            margin-left: auto;
+          ">×</button>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <p style="color: #666; font-size: 14px; margin: 0 0 16px 0;">
+            Choose what to include in your shared content:
+          </p>
+          
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+            <input type="checkbox" id="share-summary" checked style="margin: 0;">
+            <span>🤖 AI Summary & Analysis</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+            <input type="checkbox" id="share-highlights" checked style="margin: 0;">
+            <span>🎯 Key Highlights</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+            <input type="checkbox" id="share-insights" checked style="margin: 0;">
+            <span>💡 Market Insights</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+            <input type="checkbox" id="share-original" checked style="margin: 0;">
+            <span>📄 Full Original Article</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; cursor: pointer;">
+            <input type="checkbox" id="share-metadata" checked style="margin: 0;">
+            <span>📊 Article Metadata</span>
+          </label>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button onclick="closeSharingModal()" style="
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          ">Cancel</button>
+          
+          <button onclick="executeShare('${buttonElement ? 'button' : 'direct'}')" style="
+            background: linear-gradient(135deg, #0073e6, #0056b3);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+          ">📤 Share</button>
+        </div>
+      </div>
+    `;
+    
+    // Add animation CSS
+    if (!document.querySelector('#ai-modal-animations')) {
+      const style = document.createElement('style');
+      style.id = 'ai-modal-animations';
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(30px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeSharingModal();
+      }
+    });
+  }
+  
+  // Execute the share with selected options
+  function executeShare(source) {
+    const options = {
+      includeSummary: document.getElementById('share-summary')?.checked || false,
+      includeHighlights: document.getElementById('share-highlights')?.checked || false,
+      includeInsights: document.getElementById('share-insights')?.checked || false,
+      includeOriginal: document.getElementById('share-original')?.checked || false,
+      includeMetadata: document.getElementById('share-metadata')?.checked || false
+    };
+    
+    const summaryText = formatCustomSummaryForSharing(options);
+    console.log('AI News Assistant: Custom summary prepared, length:', summaryText.length);
+    
+    closeSharingModal();
+    
+    const buttonElement = source === 'button' ? document.querySelector('button[onclick="shareOrExportSummary()"]') : null;
+    
+    if (navigator.share && summaryText.length < 10000) { // Share API has length limits
       console.log('AI News Assistant: Using native share API');
       navigator.share({
         title: currentSummary?.title || 'News Summary',
@@ -1964,6 +2107,15 @@
     } else {
       console.log('AI News Assistant: Using clipboard fallback');
       copyToClipboard(summaryText, buttonElement);
+    }
+  }
+  
+  // Close sharing modal
+  function closeSharingModal() {
+    const modal = document.getElementById('ai-share-modal');
+    if (modal) {
+      modal.style.animation = 'fadeIn 0.3s ease-out reverse';
+      setTimeout(() => modal.remove(), 300);
     }
   }
   
@@ -1992,25 +2144,204 @@
   function formatSummaryForSharing() {
     if (!currentSummary) return '';
     
-    let text = `📰 ${currentSummary.title}\n\n`;
-    text += `📝 Summary:\n${currentSummary.summary}\n\n`;
+    // Start with comprehensive header
+    let text = `📰 ${currentSummary.title}\n`;
+    text += `${'='.repeat(currentSummary.title.length + 4)}\n\n`;
     
+    // Add article metadata
+    if (currentSummary.author) {
+      text += `👤 Author: ${currentSummary.author}\n`;
+    }
+    if (currentSummary.date) {
+      text += `📅 Published: ${currentSummary.date}\n`;
+    }
+    if (currentSummary.site) {
+      text += `🌐 Source: ${currentSummary.site}\n`;
+    }
+    text += `🔗 URL: ${window.location.href}\n`;
+    text += `📊 Article Type: ${currentSummary.articleType || 'General'}\n\n`;
+    
+    // AI Summary section
+    text += `🤖 AI SUMMARY\n`;
+    text += `${'─'.repeat(50)}\n`;
+    text += `${currentSummary.summary}\n\n`;
+    
+    // Key highlights section
     if (currentSummary.highlights && currentSummary.highlights.length > 0) {
-      text += `🎯 Key Points:\n`;
-      currentSummary.highlights.forEach(highlight => {
-        text += `• ${highlight}\n`;
+      text += `🎯 KEY HIGHLIGHTS\n`;
+      text += `${'─'.repeat(50)}\n`;
+      currentSummary.highlights.forEach((highlight, index) => {
+        text += `${index + 1}. ${highlight}\n`;
       });
       text += `\n`;
     }
     
+    // Market insights section
     if (currentSummary.insights) {
-      text += `💡 Insights:\n${currentSummary.insights}\n\n`;
+      text += `💡 MARKET INSIGHTS\n`;
+      text += `${'─'.repeat(50)}\n`;
+      text += `${currentSummary.insights}\n\n`;
     }
     
-    text += `🔗 Source: ${window.location.href}\n`;
-    text += `🤖 Summarized by AI News Assistant`;
+    // Original article content
+    text += `📄 FULL ORIGINAL ARTICLE\n`;
+    text += `${'─'.repeat(50)}\n`;
+    
+    // Get the original article content
+    const originalContent = getOriginalArticleContent();
+    if (originalContent.content) {
+      text += `${originalContent.content}\n\n`;
+    } else {
+      text += `[Original article content could not be extracted]\n\n`;
+    }
+    
+    // Footer with sharing info
+    text += `${'═'.repeat(50)}\n`;
+    text += `🤖 AI News Assistant v2.4.0\n`;
+    text += `📅 Shared on: ${new Date().toLocaleString()}\n`;
+    text += `✨ Enhanced with AI-powered analysis and highlighting\n`;
+    text += `🔗 Get the extension: https://github.com/yao8433/ai-news-assistant-extension\n`;
     
     return text;
+  }
+  
+  // Format summary with custom options for sharing
+  function formatCustomSummaryForSharing(options) {
+    if (!currentSummary) return '';
+    
+    // Start with header
+    let text = `📰 ${currentSummary.title}\n`;
+    text += `${'='.repeat(currentSummary.title.length + 4)}\n\n`;
+    
+    // Add metadata if requested
+    if (options.includeMetadata) {
+      if (currentSummary.author) {
+        text += `👤 Author: ${currentSummary.author}\n`;
+      }
+      if (currentSummary.date) {
+        text += `📅 Published: ${currentSummary.date}\n`;
+      }
+      if (currentSummary.site) {
+        text += `🌐 Source: ${currentSummary.site}\n`;
+      }
+      text += `🔗 URL: ${window.location.href}\n`;
+      text += `📊 Article Type: ${currentSummary.articleType || 'General'}\n\n`;
+    }
+    
+    // AI Summary section
+    if (options.includeSummary) {
+      text += `🤖 AI SUMMARY\n`;
+      text += `${'─'.repeat(50)}\n`;
+      text += `${currentSummary.summary}\n\n`;
+    }
+    
+    // Key highlights section
+    if (options.includeHighlights && currentSummary.highlights && currentSummary.highlights.length > 0) {
+      text += `🎯 KEY HIGHLIGHTS\n`;
+      text += `${'─'.repeat(50)}\n`;
+      currentSummary.highlights.forEach((highlight, index) => {
+        text += `${index + 1}. ${highlight}\n`;
+      });
+      text += `\n`;
+    }
+    
+    // Market insights section
+    if (options.includeInsights && currentSummary.insights) {
+      text += `💡 MARKET INSIGHTS\n`;
+      text += `${'─'.repeat(50)}\n`;
+      text += `${currentSummary.insights}\n\n`;
+    }
+    
+    // Original article content
+    if (options.includeOriginal) {
+      text += `📄 FULL ORIGINAL ARTICLE\n`;
+      text += `${'─'.repeat(50)}\n`;
+      
+      const originalContent = getOriginalArticleContent();
+      if (originalContent.content) {
+        text += `${originalContent.content}\n\n`;
+      } else {
+        text += `[Original article content could not be extracted]\n\n`;
+      }
+    }
+    
+    // Footer
+    text += `${'═'.repeat(50)}\n`;
+    text += `🤖 AI News Assistant v2.4.0\n`;
+    text += `📅 Shared on: ${new Date().toLocaleString()}\n`;
+    
+    if (options.includeSummary || options.includeHighlights || options.includeInsights) {
+      text += `✨ Enhanced with AI-powered analysis and highlighting\n`;
+    }
+    
+    text += `🔗 Get the extension: https://github.com/yao8433/ai-news-assistant-extension\n`;
+    
+    return text;
+  }
+  
+  // Extract original article content for sharing
+  function getOriginalArticleContent() {
+    // Use the same extraction logic as the main content extraction
+    const hostname = window.location.hostname.replace('www.', '');
+    const selector = siteSelectors[hostname] || siteSelectors.default;
+    
+    // Get title
+    const title = document.querySelector(selector.title)?.textContent?.trim() || 
+                  document.querySelector('h1')?.textContent?.trim() || 
+                  document.title;
+    
+    // Get author
+    const author = document.querySelector(selector.author)?.textContent?.trim() || '';
+    
+    // Get date
+    const date = document.querySelector(selector.date)?.textContent?.trim() || 
+                 document.querySelector('time')?.getAttribute('datetime') || '';
+    
+    // Get main content
+    let content = '';
+    const contentElements = document.querySelectorAll(selector.content);
+    
+    if (contentElements.length > 0) {
+      contentElements.forEach(element => {
+        const text = element.textContent?.trim();
+        if (text && text.length > 20) { // Filter out very short elements
+          content += text + '\n\n';
+        }
+      });
+    } else {
+      // Fallback to generic selectors
+      const fallbackSelectors = [
+        'article p',
+        '.article-content p',
+        '.story-body p',
+        '.content p',
+        'main p',
+        '.post-content p',
+        '[class*="article"] p',
+        '[class*="story"] p'
+      ];
+      
+      for (const fallbackSelector of fallbackSelectors) {
+        const elements = document.querySelectorAll(fallbackSelector);
+        if (elements.length > 3) { // Must have substantial content
+          elements.forEach(element => {
+            const text = element.textContent?.trim();
+            if (text && text.length > 30) {
+              content += text + '\n\n';
+            }
+          });
+          break;
+        }
+      }
+    }
+    
+    return {
+      title,
+      author,
+      date,
+      content: content.trim(),
+      site: hostname
+    };
   }
   
   // Send feedback to backend
