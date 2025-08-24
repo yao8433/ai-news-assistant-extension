@@ -180,6 +180,26 @@ class SidePanelApp {
     }
     
     displaySummary(summary) {
+        console.log('SidePanel: Displaying summary with data:', summary);
+        
+        // Check if this is a video analysis - comprehensive detection
+        const isVideoAnalysis = summary.analysis_type === 'video' || 
+                               summary.video_analysis || 
+                               summary.content_type === 'video' ||
+                               summary.type === 'video' ||
+                               (typeof summary.summary === 'string' && (
+                                   summary.summary.includes('Video Analysis') ||
+                                   summary.summary.includes('## Video Analysis') ||
+                                   summary.summary.includes('🎬') ||
+                                   summary.summary.includes('video content') ||
+                                   summary.summary.includes('Video content')
+                               ));
+        
+        if (isVideoAnalysis) {
+            this.displayVideoAnalysis(summary);
+            return;
+        }
+        
         // Display main summary
         this.summaryText.textContent = summary.summary || summary.main_summary;
         
@@ -200,6 +220,194 @@ class SidePanelApp {
         } else {
             this.insightsSection.style.display = 'none';
         }
+    }
+    
+    displayVideoAnalysis(summary) {
+        console.log('SidePanel: Displaying video analysis');
+        
+        // Create video analysis container if it doesn't exist
+        let videoContainer = document.getElementById('videoAnalysisContainer');
+        if (!videoContainer) {
+            videoContainer = this.createVideoAnalysisContainer();
+        }
+        
+        // Parse the video analysis content - handle multiple formats
+        let analysisContent = summary.summary || summary.content || summary.analysis || '';
+        
+        console.log('SidePanel: Video analysis content:', analysisContent.substring(0, 200) + '...');
+        
+        // Clear existing content
+        videoContainer.innerHTML = '';
+        
+        // Add video analysis header
+        const header = document.createElement('div');
+        header.className = 'video-analysis-header';
+        header.innerHTML = `
+            <div class="video-icon">🎬</div>
+            <h2>Video Analysis</h2>
+            <div class="analysis-type">Comprehensive Analysis</div>
+        `;
+        videoContainer.appendChild(header);
+        
+        // Parse and display different sections
+        const sections = this.parseVideoAnalysisSections(analysisContent);
+        
+        sections.forEach(section => {
+            const sectionEl = document.createElement('div');
+            sectionEl.className = 'video-analysis-section';
+            
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = section.title;
+            titleEl.className = 'section-title';
+            sectionEl.appendChild(titleEl);
+            
+            const contentEl = document.createElement('div');
+            contentEl.className = 'section-content';
+            contentEl.innerHTML = this.formatSectionContent(section.content);
+            sectionEl.appendChild(contentEl);
+            
+            videoContainer.appendChild(sectionEl);
+        });
+        
+        // Show the video container
+        videoContainer.style.display = 'block';
+        
+        // Hide standard summary sections since we're showing video analysis
+        this.summaryText.style.display = 'none';
+        this.highlightsList.parentElement.style.display = 'none';
+        this.insightsSection.style.display = 'none';
+    }
+    
+    createVideoAnalysisContainer() {
+        const container = document.createElement('div');
+        container.id = 'videoAnalysisContainer';
+        container.className = 'video-analysis-container';
+        
+        // Insert after the summary controls
+        const summaryControls = document.querySelector('.summary-controls');
+        if (summaryControls) {
+            summaryControls.parentNode.insertBefore(container, summaryControls.nextSibling);
+        } else {
+            // Fallback: append to summary state
+            const summaryState = document.getElementById('summaryState');
+            if (summaryState) {
+                summaryState.appendChild(container);
+            }
+        }
+        
+        return container;
+    }
+    
+    parseVideoAnalysisSections(content) {
+        const sections = [];
+        
+        // Define section patterns to match the backend response
+        const sectionPatterns = [
+            { title: 'Video Analysis', pattern: /## Video Analysis[\s\S]*?(?=##|$)/ },
+            { title: 'Key Topics', pattern: /## Key Topics[\s\S]*?(?=##|$)/ },
+            { title: 'Comprehensive Analysis', pattern: /## Comprehensive Analysis[\s\S]*?(?=##|$)/ },
+            { title: 'Executive Summary', pattern: /## Executive Summary[\s\S]*?(?=##|$)/ },
+            { title: 'Key Insights', pattern: /## Key Insights[\s\S]*?(?=##|$)/ },
+            { title: 'Market Impact Analysis', pattern: /## Market Impact Analysis[\s\S]*?(?=##|$)/ },
+            { title: 'Regulatory and Policy Implications', pattern: /## Regulatory and Policy Implications[\s\S]*?(?=##|$)/ },
+            { title: 'Investment Considerations', pattern: /## Investment Considerations[\s\S]*?(?=##|$)/ },
+            { title: 'Timeline and Context', pattern: /## Timeline and Context[\s\S]*?(?=##|$)/ },
+            { title: 'Long-term Implications', pattern: /## Long-term Implications[\s\S]*?(?=##|$)/ }
+        ];
+        
+        sectionPatterns.forEach(({ title, pattern }) => {
+            const match = content.match(pattern);
+            if (match) {
+                const sectionContent = match[0]
+                    .replace(`## ${title}`, '')
+                    .trim();
+                
+                if (sectionContent.length > 0) {
+                    sections.push({
+                        title: title,
+                        content: sectionContent
+                    });
+                }
+            }
+        });
+        
+        // If no sections found, try alternative parsing or treat as single section
+        if (sections.length === 0 && content.trim()) {
+            // Try to parse different formats
+            const lines = content.split('\n');
+            let currentSection = null;
+            let currentContent = [];
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                // Check for potential section headers (various formats)
+                if (trimmedLine.match(/^(Video Analysis|Key Topics|Comprehensive Analysis|Executive Summary|Key Insights|Market Impact|Investment|Timeline|Long-term)/i) ||
+                    trimmedLine.match(/^\*\*(Video Analysis|Key Topics|Comprehensive Analysis|Executive Summary|Key Insights|Market Impact|Investment|Timeline|Long-term)/) ||
+                    trimmedLine.match(/^#+ ?(Video Analysis|Key Topics|Comprehensive Analysis|Executive Summary|Key Insights|Market Impact|Investment|Timeline|Long-term)/)) {
+                    
+                    // Save previous section
+                    if (currentSection && currentContent.length > 0) {
+                        sections.push({
+                            title: currentSection,
+                            content: currentContent.join('\n').trim()
+                        });
+                    }
+                    
+                    // Start new section
+                    currentSection = trimmedLine
+                        .replace(/^#+\s*/, '')      // Remove markdown headers
+                        .replace(/^\*\*/, '')       // Remove bold markers
+                        .replace(/\*\*$/, '')       // Remove closing bold markers
+                        .replace(/^-\s*/, '')       // Remove list markers
+                        .trim();
+                    currentContent = [];
+                } else if (trimmedLine.length > 0) {
+                    currentContent.push(line);
+                }
+            }
+            
+            // Add the last section
+            if (currentSection && currentContent.length > 0) {
+                sections.push({
+                    title: currentSection,
+                    content: currentContent.join('\n').trim()
+                });
+            }
+            
+            // If still no sections found, treat the entire content as a single section
+            if (sections.length === 0) {
+                sections.push({
+                    title: 'Video Analysis',
+                    content: content
+                });
+            }
+        }
+        
+        console.log('SidePanel: Parsed sections:', sections.map(s => s.title));
+        
+        return sections;
+    }
+    
+    formatSectionContent(content) {
+        // Convert markdown-like formatting to HTML
+        let formatted = content
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold text
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic text
+            .replace(/^- (.*$)/gm, '<li>$1</li>')              // List items
+            .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')          // Numbered list items
+            .replace(/\n\n/g, '</p><p>')                       // Paragraphs
+            .replace(/\n/g, '<br>');                           // Line breaks
+        
+        // Wrap list items in ul tags
+        formatted = formatted.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
+        
+        // Wrap in paragraphs if not already wrapped
+        if (!formatted.includes('<p>') && !formatted.includes('<ul>')) {
+            formatted = `<p>${formatted}</p>`;
+        }
+        
+        return formatted;
     }
     
     async regenerateSummary() {
