@@ -107,6 +107,28 @@
                     </label>
                     <div class="help-text">Automatically highlight important points in the original article text</div>
                 </div>
+
+                <div class="form-group">
+                    <label for="highlightStyle">Highlight Style:</label>
+                    <select id="highlightStyle">
+                        <option value="default" selected>Default (Yellow with border)</option>
+                        <option value="subtle">Subtle (Light gray with border)</option>
+                        <option value="vibrant">Vibrant (Green with shadow)</option>
+                        <option value="minimal">Minimal (Underline only)</option>
+                    </select>
+                    <div class="help-text">Choose how highlighted text appears in articles</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="highlightDelay">Highlight Animation Speed:</label>
+                    <select id="highlightDelay">
+                        <option value="150">Fast (150ms)</option>
+                        <option value="300" selected>Normal (300ms)</option>
+                        <option value="500">Slow (500ms)</option>
+                        <option value="0">Instant (No delay)</option>
+                    </select>
+                    <div class="help-text">Speed of the highlighting animation between key points</div>
+                </div>
             </div>
 
             <div class="section">

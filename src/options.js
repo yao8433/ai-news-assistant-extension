@@ -17,7 +17,9 @@ class OptionsManager {
             autoSummarize: true,
             enableDebugLogs: false,
             autoHighlightKeyPoints: true,
-            customSources: ''
+            customSources: '',
+            highlightStyle: 'default',
+            highlightDelay: '300'
         };
         
         this.init();
@@ -89,6 +91,8 @@ class OptionsManager {
             document.getElementById('enableDebugLogs').checked = settings.enableDebugLogs === true;
             document.getElementById('autoHighlightKeyPoints').checked = settings.autoHighlightKeyPoints !== false;
             document.getElementById('customSources').value = settings.customSources || '';
+            document.getElementById('highlightStyle').value = settings.highlightStyle || 'default';
+            document.getElementById('highlightDelay').value = settings.highlightDelay || '300';
             
             console.log('Settings loaded:', settings);
         } catch (error) {
@@ -165,7 +169,9 @@ class OptionsManager {
             autoSummarize: document.getElementById('autoSummarize').checked,
             enableDebugLogs: document.getElementById('enableDebugLogs').checked,
             autoHighlightKeyPoints: document.getElementById('autoHighlightKeyPoints').checked,
-            customSources: document.getElementById('customSources').value.trim()
+            customSources: document.getElementById('customSources').value.trim(),
+            highlightStyle: document.getElementById('highlightStyle').value,
+            highlightDelay: document.getElementById('highlightDelay').value
         };
     }
 

@@ -462,50 +462,272 @@
       const settings = await chrome.storage.sync.get([
         'autoHighlightKeyPoints',
         'summaryLength',
-        'focusArea'
+        'focusArea',
+        'highlightStyle',
+        'highlightDelay'
       ]);
       
       if (settings.autoHighlightKeyPoints !== false) {
         console.log('AI News Assistant: Auto-highlighting enabled');
+        showProcessingIndicator();
+        
+        let timeoutId;
+        let isProcessed = false;
         
         // Listen for when summary becomes available
         chrome.runtime.onMessage.addListener(function handleSummaryReady(message) {
-          if (message.action === 'contentReady' && message.data?.highlights) {
+          if (message.action === 'contentReady' && message.data?.highlights && !isProcessed) {
+            isProcessed = true;
+            clearTimeout(timeoutId);
+            hideProcessingIndicator();
+            
             console.log('AI News Assistant: Auto-highlighting key points');
             
             // Wait a bit for summary to be displayed, then highlight
             setTimeout(() => {
-              autoHighlightArticlePoints(message.data.highlights);
+              autoHighlightArticlePoints(message.data.highlights, settings);
             }, 1500);
             
             // Remove this listener after use
             chrome.runtime.onMessage.removeListener(handleSummaryReady);
           }
         });
+        
+        // Fallback mechanism - timeout after 10 seconds
+        timeoutId = setTimeout(() => {
+          if (!isProcessed) {
+            console.warn('AI News Assistant: contentReady timeout, attempting fallback');
+            hideProcessingIndicator();
+            // Try to get highlights from already loaded summary
+            attemptFallbackHighlighting(settings);
+          }
+        }, 10000);
       }
     } catch (error) {
       console.warn('AI News Assistant: Error checking auto-highlight settings:', error);
+      hideProcessingIndicator();
     }
   }
   
-  // Auto-highlight key points in the article when summary is ready
-  function autoHighlightArticlePoints(highlights) {
+  // Processing indicator functions
+  function showProcessingIndicator() {
+    if (document.getElementById('ai-processing-indicator')) return;
+    
+    const indicator = document.createElement('div');
+    indicator.id = 'ai-processing-indicator';
+    indicator.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="ai-spinner"></div>
+        <span>Preparing highlights...</span>
+      </div>
+    `;
+    indicator.style.cssText = `
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      background: rgba(0, 115, 230, 0.95);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      z-index: 10002;
+      backdrop-filter: blur(10px);
+      animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Add spinner CSS if not exists
+    if (!document.querySelector('#ai-spinner-styles')) {
+      const style = document.createElement('style');
+      style.id = 'ai-spinner-styles';
+      style.textContent = `
+        .ai-spinner {
+          width: 12px;
+          height: 12px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-radius: 50%;
+          border-top-color: white;
+          animation: spin 1s linear infinite;
+        }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(indicator);
+  }
+  
+  function hideProcessingIndicator() {
+    const indicator = document.getElementById('ai-processing-indicator');
+    if (indicator) {
+      indicator.style.animation = 'slideInRight 0.3s ease-out reverse';
+      setTimeout(() => indicator.remove(), 300);
+    }
+  }
+  
+  // Fallback highlighting when contentReady message fails
+  function attemptFallbackHighlighting(settings) {
+    // Check if summary panel exists and has highlights
+    const summaryPanel = document.getElementById('summary-content');
+    if (summaryPanel && currentSummary?.highlights) {
+      console.log('AI News Assistant: Using fallback highlighting');
+      autoHighlightArticlePoints(currentSummary.highlights, settings);
+    } else {
+      console.log('AI News Assistant: No summary data available for fallback');
+      showAutoHighlightError();
+    }
+  }
+  
+  function showAutoHighlightError() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #dc3545, #c82333);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    notification.innerHTML = `⚠️ Auto-highlighting unavailable`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => notification.remove(), 300);
+    }, 4000);
+  }
+
+  // Enhanced auto-highlight with customizable settings
+  function autoHighlightArticlePoints(highlights, settings = {}) {
     if (!highlights || highlights.length === 0) return;
     
     console.log('AI News Assistant: Auto-highlighting', highlights.length, 'key points');
     
-    // Use the existing highlight function with a slight delay between highlights
+    // Get user preferences with defaults
+    const baseDelay = settings.highlightDelay || 300;
+    const style = settings.highlightStyle || 'default';
+    
+    // Use the existing highlight function with dynamic delay
     highlights.forEach((highlight, index) => {
+      // Add slight randomness for more natural feel (250-350ms range)
+      const randomDelay = baseDelay + (Math.random() * 100 - 50);
+      
       setTimeout(() => {
-        highlightTextInArticle(highlight, `auto-highlight-${index}`);
-      }, index * 300); // Stagger highlights for visual effect
+        highlightTextInArticle(highlight, `auto-highlight-${index}`, style);
+      }, index * randomDelay);
     });
     
-    // Show notification that auto-highlighting occurred
-    showAutoHighlightNotification(highlights.length);
+    // Show enhanced notification with progress
+    showProgressiveHighlightNotification(highlights.length, baseDelay);
   }
   
-  // Show notification that auto-highlighting occurred
+  // Enhanced progressive notification with real-time updates
+  function showProgressiveHighlightNotification(totalCount, delay) {
+    const notification = document.createElement('div');
+    notification.id = 'ai-highlight-progress';
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out;
+      min-width: 200px;
+    `;
+    
+    // Add animation CSS if not already present
+    if (!document.querySelector('#ai-highlight-animations')) {
+      const style = document.createElement('style');
+      style.id = 'ai-highlight-animations';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        .progress-bar {
+          width: 100%;
+          height: 3px;
+          background: rgba(255,255,255,0.3);
+          border-radius: 2px;
+          margin-top: 8px;
+          overflow: hidden;
+        }
+        .progress-fill {
+          height: 100%;
+          background: white;
+          width: 0%;
+          transition: width 0.3s ease-out;
+          border-radius: 2px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    let currentCount = 0;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="ai-spinner" style="width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s linear infinite;"></span>
+        <span id="progress-text">Highlighting: 0/${totalCount}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Update progress as highlights are applied
+    const updateInterval = setInterval(() => {
+      currentCount++;
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      
+      if (progressText && progressFill) {
+        progressText.textContent = `Highlighting: ${currentCount}/${totalCount}`;
+        progressFill.style.width = `${(currentCount / totalCount) * 100}%`;
+      }
+      
+      if (currentCount >= totalCount) {
+        clearInterval(updateInterval);
+        
+        // Show completion state
+        setTimeout(() => {
+          if (notification.parentElement) {
+            notification.innerHTML = `✨ Auto-highlighted ${totalCount} key points`;
+            notification.style.animation = 'pulse 0.5s ease-out';
+            
+            // Remove after showing completion
+            setTimeout(() => {
+              notification.style.animation = 'slideIn 0.3s ease-out reverse';
+              setTimeout(() => notification.remove(), 300);
+            }, 2000);
+          }
+        }, 500);
+      }
+    }, delay + 50); // Slightly faster than highlight delay for smooth updates
+  }
+  
+  // Fallback simple notification for manual highlights
   function showAutoHighlightNotification(count) {
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -523,21 +745,8 @@
       animation: slideIn 0.3s ease-out;
     `;
     
-    notification.innerHTML = `✨ Auto-highlighted ${count} key points`;
+    notification.innerHTML = `✨ Highlighted ${count} key points`;
     document.body.appendChild(notification);
-    
-    // Add animation CSS if not already present
-    if (!document.querySelector('#ai-highlight-animations')) {
-      const style = document.createElement('style');
-      style.id = 'ai-highlight-animations';
-      style.textContent = `
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
     
     // Remove notification after 3 seconds
     setTimeout(() => {
@@ -1623,7 +1832,7 @@
     console.log('AI News Assistant: Highlighted', currentSummary.highlights.length, 'key points');
   }
   
-  function highlightTextInArticle(searchText, className) {
+  function highlightTextInArticle(searchText, className, style = 'default') {
     const articleContent = document.querySelector('article, .article-content, .story-body, .content');
     if (!articleContent) return;
     
@@ -1640,8 +1849,14 @@
       textNodes.push(node);
     }
     
-    // Find and highlight matching text
-    const searchWords = searchText.toLowerCase().split(' ').filter(word => word.length > 3);
+    // Enhanced word matching with better semantic detection
+    const searchWords = searchText.toLowerCase()
+      .split(' ')
+      .filter(word => word.length > 2) // Reduced from 3 for better matching
+      .filter(word => !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'may', 'she', 'use', 'your', 'each', 'from', 'they', 'been', 'good', 'much', 'some', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were'].includes(word));
+    
+    // Get highlight styles based on user preference
+    const highlightStyles = getHighlightStyles(style);
     
     textNodes.forEach(textNode => {
       const text = textNode.textContent.toLowerCase();
@@ -1650,17 +1865,69 @@
       if (hasMatch && textNode.parentElement) {
         const parent = textNode.parentElement;
         if (!parent.classList.contains(`ai-${className}`)) {
-          parent.style.background = 'linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%)';
-          parent.style.borderLeft = '3px solid #ffc107';
-          parent.style.paddingLeft = '8px';
-          parent.style.margin = '4px 0';
-          parent.style.borderRadius = '3px';
-          parent.style.transition = 'all 0.3s ease';
+          // Apply customizable styles with smooth animation
+          Object.assign(parent.style, highlightStyles.base);
           parent.classList.add(`ai-${className}`);
           highlightedElements.push(parent);
+          
+          // Add entrance animation
+          parent.style.opacity = '0';
+          parent.style.transform = 'scale(0.95)';
+          
+          requestAnimationFrame(() => {
+            parent.style.transition = 'all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1)';
+            parent.style.opacity = '1';
+            parent.style.transform = 'scale(1)';
+          });
         }
       }
     });
+  }
+  
+  // Get highlight styles based on user preference
+  function getHighlightStyles(style) {
+    const styles = {
+      default: {
+        base: {
+          background: 'linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%)',
+          borderLeft: '3px solid #ffc107',
+          paddingLeft: '8px',
+          margin: '4px 0',
+          borderRadius: '3px',
+          boxShadow: '0 1px 3px rgba(255, 193, 7, 0.2)'
+        }
+      },
+      subtle: {
+        base: {
+          background: 'linear-gradient(120deg, #f8f9fa 0%, #e9ecef 100%)',
+          borderLeft: '2px solid #6c757d',
+          paddingLeft: '6px',
+          margin: '2px 0',
+          borderRadius: '2px',
+          boxShadow: '0 1px 2px rgba(108, 117, 125, 0.1)'
+        }
+      },
+      vibrant: {
+        base: {
+          background: 'linear-gradient(120deg, #d4edda 0%, #c3e6cb 100%)',
+          borderLeft: '4px solid #28a745',
+          paddingLeft: '10px',
+          margin: '6px 0',
+          borderRadius: '4px',
+          boxShadow: '0 2px 4px rgba(40, 167, 69, 0.3)'
+        }
+      },
+      minimal: {
+        base: {
+          background: 'rgba(255, 193, 7, 0.1)',
+          borderBottom: '2px solid #ffc107',
+          paddingBottom: '1px',
+          margin: '1px 0'
+        }
+      }
+    };
+    
+    return styles[style] || styles.default;
   }
   
   function clearHighlights() {

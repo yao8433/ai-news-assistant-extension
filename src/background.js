@@ -9,7 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
     language: 'english',
     autoSummarize: true,
     autoHighlightKeyPoints: true,
-    customSources: ''
+    customSources: '',
+    highlightStyle: 'default',
+    highlightDelay: '300'
   });
 });
 
