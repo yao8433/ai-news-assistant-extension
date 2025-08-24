@@ -1982,7 +1982,7 @@
       ">
         <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 20px;">
           <h3 style="margin: 0; color: #333; font-size: 18px;">📤 Share Article</h3>
-          <button onclick="closeSharingModal()" style="
+          <button id="close-modal-btn" style="
             background: none;
             border: none;
             font-size: 20px;
@@ -2024,7 +2024,7 @@
         </div>
         
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button onclick="closeSharingModal()" style="
+          <button id="cancel-share-btn" style="
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             color: #495057;
@@ -2034,7 +2034,7 @@
             font-size: 14px;
           ">Cancel</button>
           
-          <button onclick="executeShare('${buttonElement ? 'button' : 'direct'}')" style="
+          <button id="execute-share-btn" style="
             background: linear-gradient(135deg, #0073e6, #0056b3);
             border: none;
             color: white;
@@ -2067,6 +2067,32 @@
     
     document.body.appendChild(modal);
     
+    // Add event listeners to modal buttons
+    const cancelBtn = document.getElementById('cancel-share-btn');
+    const shareBtn = document.getElementById('execute-share-btn');
+    const closeBtn = document.getElementById('close-modal-btn');
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        console.log('AI News Assistant: Cancel button clicked');
+        closeSharingModal();
+      });
+    }
+    
+    if (shareBtn) {
+      shareBtn.addEventListener('click', () => {
+        console.log('AI News Assistant: Share button clicked');
+        executeShare(buttonElement ? 'button' : 'direct');
+      });
+    }
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        console.log('AI News Assistant: Close X button clicked');
+        closeSharingModal();
+      });
+    }
+    
     // Close on background click
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
@@ -2077,6 +2103,8 @@
   
   // Execute the share with selected options
   function executeShare(source) {
+    console.log('AI News Assistant: executeShare called with source:', source);
+    
     const options = {
       includeSummary: document.getElementById('share-summary')?.checked || false,
       includeHighlights: document.getElementById('share-highlights')?.checked || false,
@@ -2084,6 +2112,8 @@
       includeOriginal: document.getElementById('share-original')?.checked || false,
       includeMetadata: document.getElementById('share-metadata')?.checked || false
     };
+    
+    console.log('AI News Assistant: Sharing options:', options);
     
     const summaryText = formatCustomSummaryForSharing(options);
     console.log('AI News Assistant: Custom summary prepared, length:', summaryText.length);
@@ -2112,10 +2142,14 @@
   
   // Close sharing modal
   function closeSharingModal() {
+    console.log('AI News Assistant: closeSharingModal called');
     const modal = document.getElementById('ai-share-modal');
     if (modal) {
+      console.log('AI News Assistant: Closing modal');
       modal.style.animation = 'fadeIn 0.3s ease-out reverse';
       setTimeout(() => modal.remove(), 300);
+    } else {
+      console.warn('AI News Assistant: Modal not found when trying to close');
     }
   }
   
